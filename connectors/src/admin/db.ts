@@ -1,6 +1,7 @@
 import { Sequelize } from "sequelize";
 
 import { Connector, sequelize_conn } from "@connectors/lib/models";
+import { ConfluenceConnectorState, ConfluenceSpaces } from "@connectors/lib/models/confluence";
 import {
   GithubConnectorState,
   GithubDiscussion,
@@ -35,6 +36,8 @@ import logger from "@connectors/logger/logger";
 
 async function main(): Promise<void> {
   await Connector.sync({ alter: true });
+  await ConfluenceConnectorState.sync({alter: true});
+  await ConfluenceSpaces.sync({alter: true});
   await SlackConfiguration.sync({ alter: true });
   await SlackMessages.sync({ alter: true });
   await SlackChannel.sync({ alter: true });

@@ -20,38 +20,16 @@ export const CONNECTOR_CONFIGURATIONS: Record<
     isNested: boolean;
   }
 > = {
-  notion: {
-    name: "Notion",
-    connectorProvider: "notion",
+  confluence: {
+    name: "Confluence",
+    connectorProvider: "confluence",
     isBuilt: true,
-    logoPath: "/static/notion_32x32.png",
+    logoPath: "/static/intercom_32x32.png",
     description:
-      "Authorize granular access to your company's Notion workspace, by top-level pages.",
-    limitations: "External files and content behind links are not indexed.",
-    logoComponent: NotionLogo,
-    isNested: true,
-  },
-  google_drive: {
-    name: "Google Drive™",
-    connectorProvider: "google_drive",
-    isBuilt: true,
-    logoPath: "/static/google_drive_32x32.png",
-    description:
-      "Authorize granular access to your company's Google Drive, by drives and folders. Supported files include GDocs, GSlides, and .txt files. Email us for .pdf indexation.",
-    limitations:
-      "Files with more than 750KB of extracted text are ignored. By default, PDF files are not indexed. Email us at team@dust.tt to enable PDF indexing.",
-    logoComponent: DriveLogo,
-    isNested: true,
-  },
-  slack: {
-    name: "Slack",
-    connectorProvider: "slack",
-    isBuilt: true,
-    logoPath: "/static/slack_32x32.png",
-    description:
-      "Authorize granular access to your Slack workspace on a channel-by-channel basis.",
-    limitations: "External files and content behind links are not indexed.",
-    logoComponent: SlackLogo,
+      "Grant tailored access to your organization's Confluence shared spaces.",
+    limitations: null,
+    // TODO: Confluence.
+    logoComponent: IntercomLogo,
     isNested: false,
   },
   github: {
@@ -66,6 +44,29 @@ export const CONNECTOR_CONFIGURATIONS: Record<
     logoComponent: GithubLogo,
     isNested: true,
   },
+  google_drive: {
+    name: "Google Drive™",
+    connectorProvider: "google_drive",
+    isBuilt: true,
+    logoPath: "/static/google_drive_32x32.png",
+    description:
+      "Authorize granular access to your company's Google Drive, by drives and folders. Supported files include GDocs, GSlides, and .txt files. Email us for .pdf indexation.",
+    limitations:
+      "Files with more than 750KB of extracted text are ignored. By default, PDF files are not indexed. Email us at team@dust.tt to enable PDF indexing.",
+    logoComponent: DriveLogo,
+    isNested: true,
+  },
+  notion: {
+    name: "Notion",
+    connectorProvider: "notion",
+    isBuilt: true,
+    logoPath: "/static/notion_32x32.png",
+    description:
+      "Authorize granular access to your company's Notion workspace, by top-level pages.",
+    limitations: "External files and content behind links are not indexed.",
+    logoComponent: NotionLogo,
+    isNested: true,
+  },
   intercom: {
     name: "Intercom",
     connectorProvider: "intercom",
@@ -75,6 +76,17 @@ export const CONNECTOR_CONFIGURATIONS: Record<
       "Authorize granular access to your company's Intercom Help Centers. Dust does not access your conversations.",
     limitations: null,
     logoComponent: IntercomLogo,
+    isNested: false,
+  },
+  slack: {
+    name: "Slack",
+    connectorProvider: "slack",
+    isBuilt: true,
+    logoPath: "/static/slack_32x32.png",
+    description:
+      "Authorize granular access to your Slack workspace on a channel-by-channel basis.",
+    limitations: "External files and content behind links are not indexed.",
+    logoComponent: SlackLogo,
     isNested: false,
   },
 };

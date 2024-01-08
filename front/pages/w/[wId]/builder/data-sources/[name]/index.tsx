@@ -56,11 +56,12 @@ import logger from "@app/logger/logger";
 
 const {
   GA_TRACKING_ID = "",
-  NANGO_SLACK_CONNECTOR_ID = "",
-  NANGO_NOTION_CONNECTOR_ID = "",
+  NANGO_CONFLUENCE_CONNECTOR_ID = "",
   NANGO_GOOGLE_DRIVE_CONNECTOR_ID = "",
   NANGO_INTERCOM_CONNECTOR_ID = "",
+  NANGO_NOTION_CONNECTOR_ID = "",
   NANGO_PUBLIC_KEY = "",
+  NANGO_SLACK_CONNECTOR_ID = "",
   GITHUB_APP_URL = "",
 } = process.env;
 
@@ -75,11 +76,12 @@ export const getServerSideProps: GetServerSideProps<{
   connector: ConnectorType | null;
   standardView: boolean;
   nangoConfig: {
-    publicKey: string;
-    slackConnectorId: string;
-    notionConnectorId: string;
+    confluenceConnectorId: string;
     googleDriveConnectorId: string;
     intercomConnectorId: string;
+    notionConnectorId: string;
+    publicKey: string;
+    slackConnectorId: string;
   };
   githubAppUrl: string;
   gaTrackingId: string;
@@ -137,11 +139,12 @@ export const getServerSideProps: GetServerSideProps<{
       connector,
       standardView,
       nangoConfig: {
-        publicKey: NANGO_PUBLIC_KEY,
-        slackConnectorId: NANGO_SLACK_CONNECTOR_ID,
-        notionConnectorId: NANGO_NOTION_CONNECTOR_ID,
+        confluenceConnectorId: NANGO_CONFLUENCE_CONNECTOR_ID,
         googleDriveConnectorId: NANGO_GOOGLE_DRIVE_CONNECTOR_ID,
         intercomConnectorId: NANGO_INTERCOM_CONNECTOR_ID,
+        notionConnectorId: NANGO_NOTION_CONNECTOR_ID,
+        publicKey: NANGO_PUBLIC_KEY,
+        slackConnectorId: NANGO_SLACK_CONNECTOR_ID,
       },
       githubAppUrl: GITHUB_APP_URL,
       gaTrackingId: GA_TRACKING_ID,
@@ -670,6 +673,7 @@ function SlackBotEnableView({
 }
 
 const CONNECTOR_TYPE_TO_MISMATCH_ERROR: Record<ConnectorProvider, string> = {
+  confluence: `You cannot select another Confluence Domain.\nPlease contact us at team@dust.tt if you initially selected the wrong Domain.`,
   slack: `You cannot select another Slack Team.\nPlease contact us at team@dust.tt if you initially selected the wrong Team.`,
   notion:
     "You cannot select another Notion Workspace.\nPlease contact us at team@dust.tt if you initially selected a wrong Workspace.",
@@ -697,6 +701,7 @@ function ManagedDataSourceView({
   dataSource: DataSourceType;
   connector: ConnectorType;
   nangoConfig: {
+    confluenceConnectorId: string;
     publicKey: string;
     slackConnectorId: string;
     notionConnectorId: string;
@@ -749,12 +754,21 @@ function ManagedDataSourceView({
     }
     const provider = connector.type;
 
+    console.log(
+      ">>> connectorIsUsingNango(provider):",
+      connectorIsUsingNango(provider)
+    );
     if (connectorIsUsingNango(provider)) {
+      console.log(
+        ">> nangoConfig.confluenceConnectorId:",
+        nangoConfig.confluenceConnectorId
+      );
       const nangoConnectorId = {
-        slack: nangoConfig.slackConnectorId,
-        notion: nangoConfig.notionConnectorId,
+        confluence: nangoConfig.confluenceConnectorId,
         google_drive: nangoConfig.googleDriveConnectorId,
         intercom: nangoConfig.intercomConnectorId,
+        notion: nangoConfig.notionConnectorId,
+        slack: nangoConfig.slackConnectorId,
       }[provider];
 
       const nango = new Nango({ publicKey: nangoConfig.publicKey });
@@ -881,6 +895,7 @@ function ManagedDataSourceView({
               <Button.List>
                 {(() => {
                   switch (connectorProvider) {
+                    case "confluence":
                     case "slack":
                     case "google_drive":
                       return (

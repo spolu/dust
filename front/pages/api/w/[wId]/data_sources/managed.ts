@@ -83,9 +83,14 @@ async function handler(
 
       if (
         !req.body.provider ||
-        !["slack", "notion", "github", "google_drive", "intercom"].includes(
-          req.body.provider
-        )
+        ![
+          "confluence",
+          "github",
+          "google_drive",
+          "intercom",
+          "notion",
+          "slack",
+        ].includes(req.body.provider)
       ) {
         return apiError(req, res, {
           status_code: 400,
@@ -95,6 +100,8 @@ async function handler(
           },
         });
       }
+
+      console.log(">> req.body:", req.body);
 
       if (typeof req.body.connectionId !== "string") {
         return apiError(req, res, {
@@ -108,6 +115,7 @@ async function handler(
       }
 
       const provider = req.body.provider as ConnectorProvider;
+      console.log(">> provider:", provider);
 
       const dataSourceName = suffix
         ? `managed-${provider}-${suffix}`
@@ -121,6 +129,10 @@ async function handler(
 
       let isDataSourceAllowedInPlan: boolean;
       switch (provider) {
+        case "confluence":
+          // TODO:
+          isDataSourceAllowedInPlan = plan.limits.connections.isSlackAllowed;
+          break;
         case "slack":
           isDataSourceAllowedInPlan = plan.limits.connections.isSlackAllowed;
           break;
@@ -153,8 +165,10 @@ async function handler(
         });
       }
 
+      console.log(">> getOrCreateSystemApiKey <<");
       const systemAPIKeyRes = await getOrCreateSystemApiKey(owner);
       if (systemAPIKeyRes.isErr()) {
+        console.error(">> Failed systemAPIKeyRes");
         logger.error(
           {
             error: systemAPIKeyRes.error,
@@ -184,6 +198,7 @@ async function handler(
         });
       }
 
+      console.log("post dustProject");
       // Dust managed credentials: managed data source.
       const credentials = dustManagedCredentials();
 
@@ -209,7 +224,9 @@ async function handler(
         credentials,
       });
 
+      console.log(">> dustDataSource:", dustDataSource);
       if (dustDataSource.isErr()) {
+        console.error(">> Failed dustDataSource");
         return apiError(req, res, {
           status_code: 500,
           api_error: {
@@ -228,6 +245,7 @@ async function handler(
         workspaceId: owner.id,
         assistantDefaultSelected: true,
       });
+      console.log(">> dataSource:", dataSource);
 
       const connectorsAPI = new ConnectorsAPI(logger);
       const connectorsRes = await connectorsAPI.createConnector(
@@ -237,6 +255,7 @@ async function handler(
         dataSourceName,
         req.body.connectionId
       );
+      console.log(">> connectorsRes:", connectorsRes);
       if (connectorsRes.isErr()) {
         logger.error(
           {

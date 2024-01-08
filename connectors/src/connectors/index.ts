@@ -1,5 +1,6 @@
 import { ConnectorProvider, ModelId } from "@dust-tt/types";
 
+import { createConfluenceConnector, retrieveConfluenceConnectorPermissions, setConfluenceConnectorPermissions, updateConfluenceConnector } from "@connectors/connectors/confluence";
 import {
   cleanupGithubConnector,
   createGithubConnector,
@@ -81,6 +82,8 @@ export const CREATE_CONNECTOR_BY_TYPE: Record<
   ConnectorProvider,
   ConnectorCreator
 > = {
+  // FIXME: Flavien.
+  confluence: createConfluenceConnector,
   slack: createSlackConnector,
   notion: createNotionConnector,
   github: createGithubConnector,
@@ -92,6 +95,7 @@ export const UPDATE_CONNECTOR_BY_TYPE: Record<
   ConnectorProvider,
   ConnectorUpdater
 > = {
+  confluence: updateConfluenceConnector,
   slack: updateSlackConnector,
   notion: updateNotionConnector,
   github: updateGithubConnector,
@@ -193,6 +197,7 @@ export const RETRIEVE_CONNECTOR_PERMISSIONS_BY_TYPE: Record<
   ConnectorProvider,
   ConnectorPermissionRetriever
 > = {
+  confluence: retrieveConfluenceConnectorPermissions,
   slack: retrieveSlackConnectorPermissions,
   github: retrieveGithubConnectorPermissions,
   notion: retrieveNotionConnectorPermissions,
@@ -204,6 +209,7 @@ export const SET_CONNECTOR_PERMISSIONS_BY_TYPE: Record<
   ConnectorProvider,
   ConnectorPermissionSetter
 > = {
+  confluence: setConfluenceConnectorPermissions,
   slack: setSlackConnectorPermissions,
   notion: async () => {
     return new Err(

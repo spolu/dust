@@ -41,11 +41,12 @@ import logger from "@app/logger/logger";
 
 const {
   GA_TRACKING_ID = "",
-  NANGO_SLACK_CONNECTOR_ID = "",
-  NANGO_NOTION_CONNECTOR_ID = "",
+  NANGO_CONFLUENCE_CONNECTOR_ID = "",
   NANGO_GOOGLE_DRIVE_CONNECTOR_ID = "",
   NANGO_INTERCOM_CONNECTOR_ID = "",
+  NANGO_NOTION_CONNECTOR_ID = "",
   NANGO_PUBLIC_KEY = "",
+  NANGO_SLACK_CONNECTOR_ID = "",
   GITHUB_APP_URL = "",
 } = process.env;
 
@@ -63,6 +64,7 @@ type DataSourceIntegration = {
   setupWithSuffix: string | null;
 };
 
+// TODO:
 const REDIRECT_TO_EDIT_PERMISSIONS = ["google_drive", "slack"];
 
 export const getServerSideProps: GetServerSideProps<{
@@ -75,11 +77,12 @@ export const getServerSideProps: GetServerSideProps<{
   plan: PlanType;
   gaTrackingId: string;
   nangoConfig: {
-    publicKey: string;
-    slackConnectorId: string;
-    notionConnectorId: string;
+    confluenceConnectorId: string;
     googleDriveConnectorId: string;
     intercomConnectorId: string;
+    notionConnectorId: string;
+    publicKey: string;
+    slackConnectorId: string;
   };
   githubAppUrl: string;
 }> = async (context) => {
@@ -232,11 +235,12 @@ export const getServerSideProps: GetServerSideProps<{
       plan,
       gaTrackingId: GA_TRACKING_ID,
       nangoConfig: {
-        publicKey: NANGO_PUBLIC_KEY,
-        slackConnectorId: NANGO_SLACK_CONNECTOR_ID,
-        notionConnectorId: NANGO_NOTION_CONNECTOR_ID,
+        confluenceConnectorId: NANGO_CONFLUENCE_CONNECTOR_ID,
         googleDriveConnectorId: NANGO_GOOGLE_DRIVE_CONNECTOR_ID,
         intercomConnectorId: NANGO_INTERCOM_CONNECTOR_ID,
+        notionConnectorId: NANGO_NOTION_CONNECTOR_ID,
+        publicKey: NANGO_PUBLIC_KEY,
+        slackConnectorId: NANGO_SLACK_CONNECTOR_ID,
       },
       githubAppUrl: GITHUB_APP_URL,
     },
@@ -385,13 +389,18 @@ export default function DataSourcesView({
   ) => {
     try {
       let connectionId: string;
+      console.log(
+        "> nangoConfig.confluenceConnectorId:",
+        nangoConfig.confluenceConnectorId
+      );
       if (connectorIsUsingNango(provider)) {
         // nango-based connectors
         const nangoConnectorId = {
-          slack: nangoConfig.slackConnectorId,
-          notion: nangoConfig.notionConnectorId,
+          confluence: nangoConfig.confluenceConnectorId,
           google_drive: nangoConfig.googleDriveConnectorId,
           intercom: nangoConfig.intercomConnectorId,
+          notion: nangoConfig.notionConnectorId,
+          slack: nangoConfig.slackConnectorId,
         }[provider];
         const nango = new Nango({ publicKey: nangoConfig.publicKey });
         const newConnectionId = buildConnectionId(owner.sId, provider);
@@ -428,6 +437,8 @@ export default function DataSourcesView({
         }
       );
 
+      console.log(">> res:", res);
+
       if (res.ok) {
         const createdManagedDataSource: {
           dataSource: DataSourceType;
@@ -454,15 +465,16 @@ export default function DataSourcesView({
         const responseText = await res.text();
         sendNotification({
           type: "error",
-          title: `Failed to enable connection (${provider})`,
+          title: `Failed to enable connection 1 (${provider})`,
           description: `Got: ${responseText}`,
         });
       }
     } catch (e) {
+      console.error(e);
       setShowConfirmConnection(null);
       sendNotification({
         type: "error",
-        title: `Failed to enable connection (${provider})`,
+        title: `Failed to enable connection 2 (${provider})`,
       });
     } finally {
       setIsLoadingByProvider((prev) => ({ ...prev, [provider]: false }));
@@ -541,6 +553,10 @@ export default function DataSourcesView({
                           let isDataSourceAllowedInPlan: boolean;
 
                           switch (ds.connectorProvider) {
+                            case "confluence":
+                              isDataSourceAllowedInPlan =
+                                planConnectionsLimits.isSlackAllowed;
+                              break;
                             case "slack":
                               isDataSourceAllowedInPlan =
                                 planConnectionsLimits.isSlackAllowed;

@@ -91,6 +91,7 @@ Plan.init(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    // Legacy, do not add anymore.
     isSlackbotAllowed: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
@@ -115,6 +116,11 @@ Plan.init(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    // // Use this new approach.
+    // managedDataSources: {
+    //   type: DataTypes.JSONB,
+    //   defaultValue: {},
+    // },
     maxDataSourcesCount: {
       type: DataTypes.INTEGER,
       allowNull: false,
