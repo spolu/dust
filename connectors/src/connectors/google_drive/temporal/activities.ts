@@ -71,24 +71,10 @@ async function getMimesTypeToSync(connectorId: ModelId) {
 
 export const statsDClient = new StatsD();
 
-type NangoGetConnectionRes = {
-  connection_id: string;
-  credentials: {
-    type: string;
-    access_token: string;
-    refresh_token: string;
-    expires_at: string;
-    expires_in: number;
-    raw: {
-      scope: string;
-      token_type: string;
-    };
-  };
-};
 
 export async function getGoogleCredentials(
   nangoConnectionId: string
-): Promise<NangoGetConnectionRes> {
+) {
   if (!NANGO_GOOGLE_DRIVE_CONNECTOR_ID) {
     throw new Error("NANGO_GOOGLE_DRIVE_CONNECTOR_ID is not defined");
   }
@@ -105,7 +91,7 @@ export async function getAuthObject(
   if (!NANGO_GOOGLE_DRIVE_CONNECTOR_ID) {
     throw new Error("NANGO_GOOGLE_DRIVE_CONNECTOR_ID is not defined");
   }
-  const res: NangoGetConnectionRes = await getConnectionFromNango({
+  const res = await getConnectionFromNango({
     connectionId: nangoConnectionId,
     integrationId: NANGO_GOOGLE_DRIVE_CONNECTOR_ID,
     refreshToken: false,

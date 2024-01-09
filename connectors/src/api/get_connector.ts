@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 
 import { Connector } from "@connectors/lib/models";
+import { ConfluencePages } from "@connectors/lib/models/confluence";
 import { GithubDiscussion, GithubIssue } from "@connectors/lib/models/github";
 import { NotionPage } from "@connectors/lib/models/notion";
 import { apiError, withLogging } from "@connectors/logger/withlogging";
@@ -37,6 +38,15 @@ const _getConnector = async (
 
   if (!firstSyncProgress) {
     switch (connector.type) {
+      case "confluence": {
+        const c = await ConfluencePages.count({
+          where: {
+            connectorId: connector.id,
+          },
+        });
+        firstSyncProgress = `${c} pages`;
+        break;
+      }
       case "github": {
         const [issues, discussions] = await Promise.all([
           GithubIssue.count({

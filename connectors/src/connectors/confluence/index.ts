@@ -1,25 +1,37 @@
-import { ConnectorPermission, ConnectorResource, ModelId } from "@dust-tt/types";
+import {
+  ConnectorPermission,
+  ConnectorResource,
+  ModelId,
+} from "@dust-tt/types";
 
-import { getConfluenceCloudInformation, listConfluenceSpaces } from "@connectors/connectors/confluence/lib/confluence_api";
+import { cachedConfig } from "@connectors/connectors/config";
+import {
+  listConfluenceSpaces,
+  tryGetConfluenceCloudInformation,
+} from "@connectors/connectors/confluence/lib/confluence_api";
+import { launchConfluenceFullSyncWorkflow } from "@connectors/connectors/confluence/temporal/client";
 import { ConnectorPermissionRetriever } from "@connectors/connectors/interface";
 import { Connector, sequelize_conn } from "@connectors/lib/models";
-import { ConfluenceConnectorState, ConfluenceSpaces } from "@connectors/lib/models/confluence";
-import { getAccessTokenFromNango, getConnectionFromNango } from "@connectors/lib/nango_helpers";
+import {
+  ConfluenceConnectorState,
+  ConfluencePages,
+  ConfluenceSpaces,
+} from "@connectors/lib/models/confluence";
+import {
+  getAccessTokenFromNango,
+  getConnectionFromNango,
+} from "@connectors/lib/nango_helpers";
 import { Err, Ok, Result } from "@connectors/lib/result";
 import logger from "@connectors/logger/logger";
 import { DataSourceConfig } from "@connectors/types/data_source_config";
 import { NangoConnectionId } from "@connectors/types/nango_connection_id";
 
-const { NANGO_CONFLUENCE_CONNECTOR_ID } = process.env;
+const { NANGO_CONFLUENCE_CONNECTOR_ID } = cachedConfig;
 
 export async function createConfluenceConnector(
   dataSourceConfig: DataSourceConfig,
   connectionId: NangoConnectionId
 ): Promise<Result<string, Error>> {
-  if (!NANGO_CONFLUENCE_CONNECTOR_ID) {
-    throw new Error("NANGO_CONFLUENCE_CONNECTOR_ID not set");
-  }
-
   const nangoConnectionId = connectionId;
   const confluenceAccessToken = await getAccessTokenFromNango({
     connectionId: nangoConnectionId,
@@ -27,15 +39,14 @@ export async function createConfluenceConnector(
     useCache: false,
   });
 
-  console.log('>> confluenceAccessToken:', confluenceAccessToken);
-
-  const confluenceCloudInformation = await getConfluenceCloudInformation(confluenceAccessToken);
-  const {id: cloudId, url: cloudUrl} = confluenceCloudInformation;
-  if (!cloudId || !cloudUrl) {
+  const confluenceCloudInformation = await tryGetConfluenceCloudInformation(
+    confluenceAccessToken
+  );
+  if (!confluenceCloudInformation) {
     return new Err(new Error("Confluence access token is invalid"));
   }
 
-  console.log('>> confluenceCloudInformation:', confluenceCloudInformation);
+  const { id: cloudId, url: cloudUrl } = confluenceCloudInformation;
 
   try {
     const connector = await sequelize_conn.transaction(async (transaction) => {
@@ -60,7 +71,9 @@ export async function createConfluenceConnector(
 
       return connector;
     });
-    // await launchNotionSyncWorkflow(connector.id);
+
+    await launchConfluenceFullSyncWorkflow(connector.id, null);
+
     return new Ok(connector.id.toString());
   } catch (e) {
     logger.error({ error: e }, "Error creating confluence connector.");
@@ -68,17 +81,14 @@ export async function createConfluenceConnector(
   }
 }
 
-export async function updateConfluenceConnector(connectorId: ModelId,
+export async function updateConfluenceConnector(
+  connectorId: ModelId,
   {
     connectionId,
   }: {
     connectionId?: NangoConnectionId | null;
   }
 ) {
-  if (!NANGO_CONFLUENCE_CONNECTOR_ID) {
-    throw new Error("NANGO_CONFLUENCE_CONNECTOR_ID not set");
-  }
-
   // TODO:
 }
 
@@ -89,10 +99,6 @@ export async function retrieveConfluenceConnectorPermissions({
 }: Parameters<ConnectorPermissionRetriever>[0]): Promise<
   Result<ConnectorResource[], Error>
 > {
-  if (!NANGO_CONFLUENCE_CONNECTOR_ID) {
-    throw new Error("NANGO_CONFLUENCE_CONNECTOR_ID not set");
-  }
-
   if (parentInternalId) {
     return new Err(
       new Error(
@@ -101,12 +107,12 @@ export async function retrieveConfluenceConnectorPermissions({
     );
   }
 
-  const c = await Connector.findOne({
+  const connector = await Connector.findOne({
     where: {
       id: connectorId,
     },
   });
-  if (!c) {
+  if (!connector) {
     logger.error({ connectorId }, "Connector not found");
     return new Err(new Error("Connector not found"));
   }
@@ -122,15 +128,19 @@ export async function retrieveConfluenceConnectorPermissions({
     return new Err(new Error("Confluence configuration not found"));
   }
 
-  const confluenceConnection  = await getConnectionFromNango({
-    connectionId: c.connectionId,
+  const confluenceConnection = await getConnectionFromNango({
+    connectionId: connector.connectionId,
     integrationId: NANGO_CONFLUENCE_CONNECTOR_ID,
     useCache: false,
   });
 
-  const {access_token: confluenceAccessToken} = confluenceConnection.credentials;
+  const { access_token: confluenceAccessToken } =
+    confluenceConnection.credentials;
 
-  const spaces = await listConfluenceSpaces(confluenceAccessToken, confluenceState.cloudId);
+  const spaces = await listConfluenceSpaces(
+    confluenceAccessToken,
+    confluenceState.cloudId
+  );
 
   const syncedSpaces = await ConfluenceSpaces.findAll({
     where: {
@@ -156,8 +166,8 @@ export async function retrieveConfluenceConnectorPermissions({
   });
 
   // List synced spaces.
-  if (filterPermission === 'read') {
-    return new Ok(allSpaces.filter((s) => s.permission === 'read'));
+  if (filterPermission === "read") {
+    return new Ok(allSpaces.filter((s) => s.permission === "read"));
   }
 
   return new Ok(allSpaces);
@@ -178,10 +188,11 @@ export async function setConfluenceConnectorPermissions(
     if (permission === "none") {
       await ConfluenceSpaces.destroy({
         where: {
-          connectorId: connectorId,
+          connectorId,
           spaceId: id,
         },
       });
+      // TODO(2024-01-09 flav) start a workflow to delete all pages within a Space.
     } else if (permission === "read") {
       await ConfluenceSpaces.upsert({
         connectorId: connectorId,
@@ -195,8 +206,7 @@ export async function setConfluenceConnectorPermissions(
   }
 
   if (shouldFullSync) {
-    // TODO:
-    // await launchGoogleDriveFullSyncWorkflow(connectorId.toString(), null);
+    await launchConfluenceFullSyncWorkflow(connectorId, null);
   }
 
   return new Ok(undefined);

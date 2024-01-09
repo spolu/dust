@@ -1,6 +1,7 @@
 import { ConnectorProvider, ModelId } from "@dust-tt/types";
 
 import { createConfluenceConnector, retrieveConfluenceConnectorPermissions, setConfluenceConnectorPermissions, updateConfluenceConnector } from "@connectors/connectors/confluence";
+import { launchConfluenceFullSyncWorkflow } from "@connectors/connectors/confluence/temporal/client";
 import {
   cleanupGithubConnector,
   createGithubConnector,
@@ -156,6 +157,7 @@ const toggleBotNotImplemented = async (
 };
 
 export const TOGGLE_BOT_BY_TYPE: Record<ConnectorProvider, BotToggler> = {
+  confluence: toggleBotNotImplemented,
   slack: toggleSlackbot,
   notion: toggleBotNotImplemented,
   github: toggleBotNotImplemented,
@@ -177,6 +179,7 @@ export const GET_BOT_ENABLED_BY_TYPE: Record<
   ConnectorProvider,
   BotEnabledGetter
 > = {
+  confluence: getBotEnabledNotImplemented,
   slack: getBotEnabled,
   notion: getBotEnabledNotImplemented,
   github: getBotEnabledNotImplemented,
@@ -186,6 +189,7 @@ export const GET_BOT_ENABLED_BY_TYPE: Record<
 
 export const SYNC_CONNECTOR_BY_TYPE: Record<ConnectorProvider, SyncConnector> =
   {
+    confluence: launchConfluenceFullSyncWorkflow,
     slack: launchSlackSyncWorkflow,
     notion: fullResyncNotionConnector,
     github: fullResyncGithubConnector,
@@ -257,6 +261,9 @@ export const SET_CONNECTOR_CONFIG_BY_TYPE: Record<
   ConnectorProvider,
   ConnectorConfigSetter
 > = {
+  confluence: async () => {
+    throw new Error("Not implemented");
+  },
   slack: () => {
     throw new Error("Not implemented");
   },
@@ -276,6 +283,9 @@ export const GET_CONNECTOR_CONFIG_BY_TYPE: Record<
   ConnectorProvider,
   ConnectorConfigGetter
 > = {
+  confluence: async () => {
+    throw new Error("Not implemented");
+  },
   slack: () => {
     throw new Error("Not implemented");
   },
@@ -295,6 +305,9 @@ export const GARBAGE_COLLECT_BY_TYPE: Record<
   ConnectorProvider,
   ConnectorGarbageCollector
 > = {
+  confluence: async () => {
+    throw new Error("Not implemented");
+  },
   slack: () => {
     throw new Error("Not implemented");
   },
