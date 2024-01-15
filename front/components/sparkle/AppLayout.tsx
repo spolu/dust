@@ -1,5 +1,6 @@
 import {
   Avatar,
+  Banner,
   DropdownMenu,
   Item,
   Logo,
@@ -15,7 +16,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import Script from "next/script";
 import { signOut } from "next-auth/react";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import React from "react";
 
 import WorkspacePicker from "@app/components/WorkspacePicker";
@@ -204,6 +205,37 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
+  // const isQontoWorkspaceId = owner.sId === "ee616a51bc";
+
+  // Temporary code, remove once we don't need the NPS banner anymore.
+  const isBrowser = typeof window !== "undefined";
+  useEffect(() => {
+    if (isBrowser) {
+      const bannerData = localStorage.getItem("bannerDismissed");
+      if (bannerData) {
+        const { expireAt } = JSON.parse(bannerData);
+        if (new Date(expireAt) > new Date()) {
+          setIsDismissed(true);
+        }
+      }
+    }
+  }, [isBrowser, setIsDismissed]);
+
+  const dismissBanner = () => {
+    if (isBrowser) {
+      const expirationDate = new Date();
+      expirationDate.setDate(
+        expirationDate.getDate() + 7 /* Expires after 7 days */
+      );
+      localStorage.setItem(
+        "bannerDismissed",
+        JSON.stringify({ expireAt: expirationDate })
+      );
+      setIsDismissed(true);
+    }
+  };
+
   return (
     <>
       <Head>
@@ -364,16 +396,32 @@ export default function AppLayout({
           </div>
           <div
             className={classNames(
-              "fixed left-0 right-0 top-0 z-30 flex h-16 flex-row pl-12 lg:pl-0",
+              "fixed left-0 right-0 top-0 z-30 flex min-h-16 flex-row pl-12 lg:pl-0",
               !hideSidebar ? "lg:left-80" : "",
               "border-b border-structure-300/30 bg-white/80 backdrop-blur",
               titleChildren ? "fixed" : "lg:hidden"
             )}
           >
-            <div className="grow">
-              <div className="mx-auto h-full grow px-6">
-                {titleChildren && titleChildren}
+            <div className="flex w-full flex-col">
+              <div className="grow">
+                <div className="mx-auto h-full grow px-6 py-3">
+                  {titleChildren && titleChildren}
+                </div>
               </div>
+              <Banner
+                hidden={isDismissed}
+                classNames="s-bg-indigo-300"
+                ctaLabel="Evaluate"
+                label="Please take a minute to fill out a survey on Dust as we evaluate it for Qontoers."
+                onClick={() => {
+                  window.open("https://forms.gle/g73BYFi85FkX8PpV9", "_blank");
+                  dismissBanner();
+                }}
+                onDismiss={() => {
+                  dismissBanner();
+                }}
+                title=""
+              />
             </div>
           </div>
 
@@ -399,7 +447,8 @@ export default function AppLayout({
           <main
             id="main-content"
             className={classNames(
-              "h-full overflow-x-hidden pt-16",
+              "h-full overflow-x-hidden",
+              isDismissed ? "pt-16" : "pt-32",
               titleChildren ? "" : "lg:pt-8"
             )}
           >
