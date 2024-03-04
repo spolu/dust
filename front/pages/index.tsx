@@ -6,6 +6,7 @@ import {
   GithubWhiteLogo,
   GoogleLogo,
   Hover3D,
+  LoginIcon,
   LogoHorizontalColorLogoLayer1,
   LogoHorizontalColorLogoLayer2,
   LogoHorizontalWhiteLogo,
@@ -22,7 +23,6 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import Script from "next/script";
-import { signIn } from "next-auth/react";
 import type { ParsedUrlQuery } from "querystring";
 import React, { useEffect, useRef, useState } from "react";
 import { useCookies } from "react-cookie";
@@ -42,10 +42,7 @@ const defaultFlexClasses = "flex flex-col gap-4";
 
 import { Transition } from "@headlessui/react";
 
-import {
-  SignInDropDownButton,
-  SignUpDropDownButton,
-} from "@app/components/Button";
+import { SignUpDropDownButton } from "@app/components/Button";
 import SimpleSlider from "@app/components/home/carousel";
 import Particles from "@app/components/home/particles";
 import ScrollingHeader from "@app/components/home/scrollingHeader";
@@ -116,7 +113,7 @@ export default function Home({
     }
   }, []);
 
-  function getCallbackUrl(routerQuery: ParsedUrlQuery): string {
+  function getReturnToUrl(routerQuery: ParsedUrlQuery): string {
     let callbackUrl = "/api/login";
     if (routerQuery.inviteToken) {
       callbackUrl += `?inviteToken=${routerQuery.inviteToken}`;
@@ -152,32 +149,17 @@ export default function Home({
             </P>
           </div>
           <div className="flex-grow" />
-          <Button.List>
-            <div className="invisibleFirst opacity-0 transition-all duration-500 ease-out">
-              <SignUpDropDownButton
-                onClickGoogle={() =>
-                  signIn("google", {
-                    callbackUrl: getCallbackUrl(router.query),
-                  })
-                }
-              />
-            </div>
-            <SignInDropDownButton
-              shouldDisplayGithub={
-                !(router.query.signIn && router.query.signIn !== "github")
-              }
-              onClickGithub={() => {
-                void signIn("github", {
-                  callbackUrl: getCallbackUrl(router.query),
-                });
-              }}
-              onClickGoogle={() =>
-                signIn("google", {
-                  callbackUrl: getCallbackUrl(router.query),
-                })
-              }
-            />
-          </Button.List>
+          <Button
+            variant="tertiary"
+            size="sm"
+            label="Sign up"
+            icon={LoginIcon}
+            onClick={() =>
+              (window.location.href = `/api/auth/login?returnTo=${getReturnToUrl(
+                router.query
+              )}`)
+            }
+          />
         </div>
       </ScrollingHeader>
 
@@ -242,13 +224,15 @@ export default function Home({
                   is a&nbsp;competitive&nbsp;edge.
                 </H3>
                 <div className="sm: flex w-full flex-wrap gap-4 sm:justify-start sm:gap-4 md:gap-6">
-                  <SignUpDropDownButton
-                    buttonLabel="Start with Dust Now"
-                    buttonSize="md"
-                    onClickGoogle={() =>
-                      signIn("google", {
-                        callbackUrl: getCallbackUrl(router.query),
-                      })
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    label="Sign up"
+                    icon={LoginIcon}
+                    onClick={() =>
+                      (window.location.href = `/api/auth/login?returnTo=${getReturnToUrl(
+                        router.query
+                      )}`)
                     }
                   />
                 </div>
@@ -764,15 +748,15 @@ export default function Home({
                 </span>
               </H2>
               <div>
-                <SignUpDropDownButton
+                {/* <SignUpDropDownButton
                   buttonLabel="Start with Dust Now"
                   buttonSize="md"
                   onClickGoogle={() =>
                     signIn("google", {
-                      callbackUrl: getCallbackUrl(router.query),
+                      callbackUrl: getReturnToUrl(router.query),
                     })
                   }
-                />
+                /> */}
               </div>
             </div>
             <div className="s-dark col-span-12 flex flex-row justify-center lg:px-2 2xl:px-24">

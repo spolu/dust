@@ -28,6 +28,7 @@ export type UserType = {
   lastName: string | null;
   fullName: string;
   image: string | null;
+  auth0Sub: string | null;
 };
 
 export type UserTypeWithWorkspaces = UserType & {

@@ -1,19 +1,16 @@
 import type { WithAPIErrorReponse } from "@dust-tt/types";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth/next";
 
-import { getUserFromSession } from "@app/lib/auth";
+import { getSession, getUserFromSession } from "@app/lib/auth";
 import { internalSubscribeWorkspaceToFreeTestPlan } from "@app/lib/plans/subscription";
 import { apiError, withLogging } from "@app/logger/withlogging";
 import { createAndLogMembership, createWorkspace } from "@app/pages/api/login";
-
-import { authOptions } from "./auth/[...nextauth]";
 
 async function handler(
   req: NextApiRequest,
   res: NextApiResponse<WithAPIErrorReponse<{ sId: string }>>
 ): Promise<void> {
-  const session = await getServerSession(req, res, authOptions);
+  const session = await getSession(req, res);
   if (!session) {
     res.status(401).end();
     return;

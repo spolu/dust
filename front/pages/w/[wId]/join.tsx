@@ -1,8 +1,8 @@
 import { GoogleLogo, Logo } from "@dust-tt/sparkle";
 import type { LightWorkspaceType } from "@dust-tt/types";
 import type { InferGetServerSidePropsType } from "next";
-import { signIn } from "next-auth/react";
 
+// import { signIn } from "next-auth/react";
 import { SignInButton } from "@app/components/Button";
 import { A, H1, P, Strong } from "@app/components/home/contentComponents";
 import OnboardingLayout from "@app/components/sparkle/OnboardingLayout";
@@ -146,7 +146,7 @@ export default function Join({
         )}
 
         <div className="flex flex-col items-center justify-center gap-4 ">
-          <SignInButton
+          {/* <SignInButton
             label="Sign up with Google"
             icon={GoogleLogo}
             onClick={() => {
@@ -154,7 +154,7 @@ export default function Join({
                 callbackUrl: signUpCallbackUrl,
               });
             }}
-          />
+          /> */}
         </div>
         <div className="flex flex-col gap-3 pb-20">
           <P>

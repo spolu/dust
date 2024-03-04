@@ -1,3 +1,5 @@
+import type { Session } from "@auth0/nextjs-auth0";
+import { getSession as getAuth0Session } from "@auth0/nextjs-auth0";
 import type {
   RoleType,
   UserType,
@@ -22,10 +24,15 @@ import type {
   NextApiRequest,
   NextApiResponse,
 } from "next";
-import { getServerSession } from "next-auth/next";
 import { Op } from "sequelize";
 
 import { isDevelopment } from "@app/lib/development";
+import type { ExternalUser } from "@app/lib/iam/auth0";
+import { isExternalUser } from "@app/lib/iam/auth0";
+import {
+  fetchUserFromSession,
+  maybeUpdateFromExternalUser,
+} from "@app/lib/iam/users";
 import {
   FeatureFlag,
   Key,
@@ -40,7 +47,6 @@ import { FREE_TEST_PLAN_DATA } from "@app/lib/plans/free_plans";
 import { isUpgraded } from "@app/lib/plans/plan_codes";
 import { new_id } from "@app/lib/utils";
 import logger from "@app/logger/logger";
-import { authOptions } from "@app/pages/api/auth/[...nextauth]";
 
 const {
   DUST_DEVELOPMENT_WORKSPACE_ID,
@@ -93,7 +99,10 @@ export class Authenticator {
    * @param wId string target workspace id
    * @returns Promise<Authenticator>
    */
-  static async fromSession(session: any, wId: string): Promise<Authenticator> {
+  static async fromSession(
+    session: Session,
+    wId: string
+  ): Promise<Authenticator> {
     const [workspace, user] = await Promise.all([
       (async () => {
         return Workspace.findOne({
@@ -108,8 +117,7 @@ export class Authenticator {
         } else {
           return User.findOne({
             where: {
-              provider: session.provider.provider,
-              providerId: session.provider.id.toString(),
+              auth0Sub: session.user.sub,
             },
           });
         }
@@ -158,15 +166,15 @@ export class Authenticator {
 
   /**
    * Get a an Authenticator for the target workspace and the authentified Super User user from the
-   * NextAuth session.
+   * Auth0 session.
    * Super User will have `role` set to `admin` regardless of their actual role in the workspace.
    *
-   * @param session any NextAuth session
+   * @param session any Auth0 session
    * @param wId string target workspace id
    * @returns Promise<Authenticator>
    */
   static async fromSuperUserSession(
-    session: any,
+    session: Session | null,
     wId: string | null
   ): Promise<Authenticator> {
     const [workspace, user] = await Promise.all([
@@ -186,8 +194,7 @@ export class Authenticator {
         } else {
           return User.findOne({
             where: {
-              provider: session.provider.provider,
-              providerId: session.provider.id.toString(),
+              auth0Sub: session.user.sub,
             },
           });
         }
@@ -422,7 +429,10 @@ export class Authenticator {
           id: this._user.id,
           provider: this._user.provider,
           username: this._user.username,
+          // auth0Sub: this._user.auth0Sub,
           email: this._user.email,
+          id: this._user.id,
+          username: this._user.username,
           fullName:
             this._user.firstName +
             (this._user.lastName ? ` ${this._user.lastName}` : ""),
@@ -440,7 +450,7 @@ export class Authenticator {
 }
 
 /**
- * Retrieves the NextAuth session from the request/response.
+ * Retrieves the Auth0 session from the request/response.
  * @param req NextApiRequest request object
  * @param res NextApiResponse response object
  * @returns Promise<any>
@@ -448,8 +458,13 @@ export class Authenticator {
 export async function getSession(
   req: NextApiRequest | GetServerSidePropsContext["req"],
   res: NextApiResponse | GetServerSidePropsContext["res"]
-): Promise<any> {
-  return getServerSession(req, res, authOptions);
+): Promise<(Session & { user: ExternalUser }) | null> {
+  const session = await getAuth0Session(req, res);
+  if (!session || !isExternalUser(session.user)) {
+    return null;
+  }
+
+  return session as Session & { user: ExternalUser };
 }
 
 /**
@@ -458,19 +473,13 @@ export async function getSession(
  * @returns Promise<UserType | null>
  */
 export async function getUserFromSession(
-  session: any
+  session: Session | null
 ): Promise<UserTypeWithWorkspaces | null> {
   if (!session) {
     return null;
   }
 
-  const user = await User.findOne({
-    where: {
-      provider: session.provider.provider,
-      providerId: session.provider.id.toString(),
-    },
-  });
-
+  const user = await fetchUserFromSession(session);
   if (!user) {
     return null;
   }
@@ -487,22 +496,13 @@ export async function getUserFromSession(
     },
   });
 
-  if (session.user.image !== user.imageUrl) {
-    void User.update(
-      {
-        imageUrl: session.user.image,
-      },
-      {
-        where: {
-          id: user.id,
-        },
-      }
-    );
-  }
+  // TODO:
+  await maybeUpdateFromExternalUser(user, session.user as ExternalUser);
 
   return {
     id: user.id,
     provider: user.provider,
+    auth0Sub: user.auth0Sub,
     username: user.username,
     email: user.email,
     firstName: user.firstName,
