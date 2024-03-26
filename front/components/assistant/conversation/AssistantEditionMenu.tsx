@@ -179,7 +179,7 @@ export function AssistantEditionMenu({
           )}
           <DropdownMenu.Item
             label="Duplicate (New)"
-            href={`/w/${owner.sId}/builder/assistants/new?flow=personal_assistants&duplicate=${agentConfiguration.sId}`}
+            href={`/w/${owner.sId}/builder/assistants/create?flow=personal_assistants&duplicate=${agentConfiguration.sId}`}
             icon={ClipboardIcon}
           />
           {canDelete && (
