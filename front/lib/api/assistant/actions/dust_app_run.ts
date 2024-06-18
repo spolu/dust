@@ -45,7 +45,7 @@ interface DustAppRunActionBlob {
   step: number;
 }
 
-export class DustAppRunAction extends BaseAction {
+class DustAppRunAction extends BaseAction<"dust_app_run_action"> {
   readonly agentMessageId: ModelId;
   readonly appWorkspaceId: string;
   readonly appId: string;
@@ -486,7 +486,7 @@ async function dustAppRunActionSpecification({
 // actions (the `sId` is on the `Message` object linked to the `UserMessage` parent of this action).
 export async function dustAppRunTypesFromAgentMessageIds(
   agentMessageIds: ModelId[]
-): Promise<DustAppRunActionType[]> {
+): Promise<DustAppRunAction[]> {
   const actions = await AgentDustAppRunAction.findAll({
     where: {
       agentMessageId: agentMessageIds,

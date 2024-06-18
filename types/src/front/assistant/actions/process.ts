@@ -3,7 +3,6 @@ import {
   RetrievalTimeframe,
   TimeFrame,
 } from "../../../front/assistant/actions/retrieval";
-import { BaseAction } from "../../../front/lib/api/assistant/actions/index";
 import { ModelId } from "../../../shared/model_id";
 
 // Properties in the process configuration table are stored as an array of objects.
@@ -74,10 +73,11 @@ export type ProcessActionOutputsType = {
 // future based on user feedback.
 export const PROCESS_ACTION_TOP_K = 768;
 
-export interface ProcessActionType extends BaseAction {
+export interface ProcessActionType {
   id: ModelId; // AgentProcessAction
   agentMessageId: ModelId; // AgentMessage
 
+  type: "process_action";
   params: {
     relativeTimeFrame: TimeFrame | null;
   };

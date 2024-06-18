@@ -38,7 +38,7 @@ interface TablesQueryActionBlob {
   step: number;
 }
 
-export class TablesQueryAction extends BaseAction {
+class TablesQueryAction extends BaseAction<"tables_query_action"> {
   readonly agentMessageId: ModelId;
   readonly params: DustAppParameters;
   readonly output: Record<string, string | number | boolean> | null;
@@ -90,7 +90,7 @@ export class TablesQueryAction extends BaseAction {
 // actions (the `sId` is on the `Message` object linked to the `UserMessage` parent of this action).
 export async function tableQueryTypesFromAgentMessageIds(
   agentMessageIds: ModelId[]
-): Promise<TablesQueryActionType[]> {
+): Promise<TablesQueryAction[]> {
   const actions = await AgentTablesQueryAction.findAll({
     where: {
       agentMessageId: agentMessageIds,

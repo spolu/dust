@@ -9,11 +9,11 @@ type BaseActionType =
   | "websearch_action"
   | "browse_action";
 
-export abstract class BaseAction {
+export abstract class BaseAction<T extends BaseActionType = BaseActionType> {
   readonly id: ModelId;
-  readonly type: BaseActionType;
+  readonly type: T;
 
-  constructor(id: ModelId, type: BaseActionType) {
+  constructor(id: ModelId, type: T) {
     this.id = id;
     this.type = type;
   }

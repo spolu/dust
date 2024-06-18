@@ -55,7 +55,7 @@ interface ProcessActionBlob {
   step: number;
 }
 
-export class ProcessAction extends BaseAction {
+class ProcessAction extends BaseAction<"process_action"> {
   readonly agentMessageId: ModelId;
   readonly params: {
     relativeTimeFrame: TimeFrame | null;
@@ -457,7 +457,7 @@ async function processActionSpecification({
 // optimization purposes to avoid duplicating DB requests while having clear action specific code.
 export async function processActionTypesFromAgentMessageIds(
   agentMessageIds: ModelId[]
-): Promise<ProcessActionType[]> {
+): Promise<ProcessAction[]> {
   const models = await AgentProcessAction.findAll({
     where: {
       agentMessageId: agentMessageIds,
