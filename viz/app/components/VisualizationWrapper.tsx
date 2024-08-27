@@ -1,10 +1,5 @@
 "use client";
 
-import type {
-  CommandResultMap,
-  VisualizationRPCCommand,
-  VisualizationRPCRequestMap,
-} from "@dust-tt/types";
 import { Spinner } from "@viz/app/components/Components";
 import * as papaparseAll from "papaparse";
 import * as reactAll from "react";
@@ -14,6 +9,7 @@ import { importCode, Runner } from "react-runner";
 import * as rechartsAll from "recharts";
 import { useResizeDetector } from "react-resize-detector";
 import { ErrorBoundary } from "@viz/app/components/ErrorBoundary";
+import { CommandResultMap, VisualizationRPCCommand, VisualizationRPCRequestMap } from "@dust-tt/types/dist/front/assistant/visualization";
 
 export function useVisualizationAPI(
   sendCrossDocumentMessage: ReturnType<typeof makeSendCrossDocumentMessage>
@@ -74,7 +70,22 @@ export function useVisualizationAPI(
     [sendCrossDocumentMessage]
   );
 
-  return { fetchCode, fetchFile, error, sendHeightToParent };
+  const sendScreenshotToParent = useCallback(
+    async ({ image }: { image: Blob }) => {
+      await sendCrossDocumentMessage("setScreenshot", {
+        image,
+      });
+    },
+    [sendCrossDocumentMessage]
+  );
+
+  return {
+    fetchCode,
+    fetchFile,
+    error,
+    sendHeightToParent,
+    sendScreenshotToParent,
+  };
 }
 
 const useFile = (
@@ -100,6 +111,16 @@ const useFile = (
 
   return file;
 };
+
+
+const makeScreenshot = async (sendScreenshotToParent: ({ image } : { image: Blob }) => void) => {
+  const svg = document.querySelector("svg.recharts-surface") as SVGSVGElement;
+  const svgData = new XMLSerializer().serializeToString(svg);
+  const svgBlob = new Blob([svgData], {
+    type: "image/svg+xml;charset=utf-8",
+  });
+  await sendScreenshotToParent({ image: svgBlob });
+}
 
 interface RunnerParams {
   code: string;
@@ -145,7 +166,16 @@ export function VisualizationWrapper({
 
   const [errored, setErrored] = useState<Error | null>(null);
 
-  const { fetchCode, fetchFile, error, sendHeightToParent } = api;
+  const [screenshotDownloadable, setScreenshotDownloadable] =
+    useState<boolean>(false);
+
+  const {
+    fetchCode,
+    fetchFile,
+    error,
+    sendHeightToParent,
+    sendScreenshotToParent,
+  } = api;
 
   useEffect(() => {
     const loadCode = async () => {
@@ -210,14 +240,39 @@ export function VisualizationWrapper({
 
   return (
     <div ref={ref}>
+        {screenshotDownloadable && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+            }}
+          >
+            <button
+              onClick={async () => {
+                await makeScreenshot(sendScreenshotToParent);
+              }}
+            >Download SVG</button>
+          </div>
+      )}
       <Runner
         code={runnerParams.code}
         scope={runnerParams.scope}
         onRendered={(error) => {
           if (error) {
             setErrored(error);
+          } else {
+            setTimeout(() => {
+              const svg = document.querySelector(
+                "svg.recharts-surface"
+              ) as SVGSVGElement;
+              // It seems that it's triggered before the animation is done. Which makes it's difficult to get the correct dom.
+              if (svg) {
+                setScreenshotDownloadable(true);
+              }
+            }, 2000)
           }
         }}
+        
       />
     </div>
   );

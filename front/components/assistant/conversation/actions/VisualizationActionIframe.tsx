@@ -24,6 +24,10 @@ type Visualization = {
   identifier: string;
 };
 
+type Screenshot = {
+  image: Blob;
+};
+
 const sendResponseToIframe = <T extends VisualizationRPCCommand>(
   request: { command: T } & VisualizationRPCRequest,
   response: CommandResultMap[T],
@@ -40,16 +44,30 @@ const sendResponseToIframe = <T extends VisualizationRPCCommand>(
   );
 };
 
+function downloadScreenshot({
+  image, 
+}: Screenshot) {
+  const downloadLink = document.createElement("a");
+  const url = URL.createObjectURL(image);
+  downloadLink.download = `screenshot_${new Date().getTime()}.svg`;
+  downloadLink.href = url;
+  downloadLink.click();
+}
+
 // Custom hook to encapsulate the logic for handling visualization messages.
 function useVisualizationDataHandler({
   visualization,
   setContentHeight,
+  setScreenshot,
   setIsErrored,
   vizIframeRef,
   workspaceId,
 }: {
   visualization: Visualization;
   setContentHeight: (v: SetStateAction<number>) => void;
+  setScreenshot: (
+    v: SetStateAction<Screenshot | null>
+  ) => void;
   setIsErrored: (v: SetStateAction<boolean>) => void;
   vizIframeRef: React.MutableRefObject<HTMLIFrameElement | null>;
   workspaceId: string;
@@ -100,7 +118,6 @@ function useVisualizationDataHandler({
           if (code) {
             sendResponseToIframe(data, { code }, event.source);
           }
-
           break;
 
         case "setContentHeight":
@@ -111,6 +128,12 @@ function useVisualizationDataHandler({
           setIsErrored(true);
           break;
 
+        case "setScreenshot":
+          setScreenshot({
+            image: data.params.image,
+          });
+          break;
+
         default:
           assertNever(data);
       }
@@ -118,14 +141,7 @@ function useVisualizationDataHandler({
 
     window.addEventListener("message", listener);
     return () => window.removeEventListener("message", listener);
-  }, [
-    visualization.identifier,
-    code,
-    getFileBlob,
-    setContentHeight,
-    setIsErrored,
-    vizIframeRef,
-  ]);
+  }, [visualization.identifier, code, getFileBlob, setContentHeight, setScreenshot, setIsErrored, vizIframeRef]);
 }
 
 export function VisualizationActionIframe({
@@ -138,6 +154,7 @@ export function VisualizationActionIframe({
   onRetry: () => void;
 }) {
   const [contentHeight, setContentHeight] = useState<number>(0);
+  const [screenshot, setScreenshot] = useState<Screenshot | null>(null);
   const [isErrored, setIsErrored] = useState(false);
   const [activeIndex, setActiveIndex] = useState(1);
 
@@ -152,6 +169,7 @@ export function VisualizationActionIframe({
     visualization,
     workspaceId,
     setContentHeight,
+    setScreenshot,
     setIsErrored,
     vizIframeRef,
   });
@@ -190,6 +208,12 @@ export function VisualizationActionIframe({
       }
     }
   }, [activeIndex, contentHeight, codeFullyGenerated, isErrored]);
+
+  useEffect(() => {
+    if (screenshot) {
+      downloadScreenshot({ ...screenshot });
+    }
+  }, [screenshot]);
 
   return (
     <div className="relative flex flex-col">
@@ -233,6 +257,7 @@ export function VisualizationActionIframe({
                 }}
                 className={classNames("max-h-[60vh] w-full")}
               >
+
                 <iframe
                   ref={vizIframeRef}
                   className={classNames(
