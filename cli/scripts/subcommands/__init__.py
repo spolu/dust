@@ -1,6 +1,7 @@
 import argparse
 from typing import Callable
 
+from .chat import add_chat_args
 from .create_conversation import add_create_conversation_args
 from .create_message import add_create_message_args
 from .get_conversation import add_get_conversation_args
@@ -11,6 +12,7 @@ subcommands: dict[str, Callable[[argparse.ArgumentParser], None]] = {
     "create-message": add_create_message_args,
     "list-assistants": add_list_assistants_args,
     "get-conversation": add_get_conversation_args,
+    "chat": add_chat_args,
 }
 
 __all__ = ["subcommands"]
