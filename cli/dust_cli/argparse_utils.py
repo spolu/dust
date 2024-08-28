@@ -2,6 +2,8 @@ import argparse
 from functools import wraps
 from typing import Callable
 
+import coloredlogs
+
 ParserFunction = Callable[[argparse.ArgumentParser], None]
 
 
@@ -28,6 +30,9 @@ def run_entry_point(parser_function: ParserFunction) -> Callable[[], None]:
     @wraps(parser_function)
     def inner_func() -> None:
         parser_function((parser := argparse.ArgumentParser(parser_function.__doc__)))
+        from scripts.logger_config import LOGGING_CONFIG
+
+        coloredlogs.install(**LOGGING_CONFIG)
         (args := parser.parse_args()).func(args)
 
     return inner_func
