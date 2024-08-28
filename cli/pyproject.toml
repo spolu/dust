@@ -6,7 +6,21 @@ authors = ["aubin-tchoi <aubin.tchoi@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.8 <3.13"
+coloredlogs = "^15.0.1"
+urllib3 = "1.26.6"
+tqdm = "^4.66.2"
+argcomplete = "^3.3.0"
+requests = "^2.32.3"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+isort = "^5.13.2"
+black = "^24.8.0"
+mypy = "^1.11.2"
+ruff = "^0.6.2"
 
 [build-system]
 requires = ["poetry-core"]
