@@ -28,7 +28,7 @@ def create_message(
                     "fullName": "",
                     "username": user,
                 },
-                "mentions": [],
+                "mentions": [{"configurationId": "dust"}],
             },
         ).text
     )
