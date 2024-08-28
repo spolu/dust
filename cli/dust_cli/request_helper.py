@@ -57,7 +57,6 @@ def handle_common_error_codes(response: requests.Response) -> requests.Response:
         logging.error("Unauthorized access, please check your API key.")
         raise ValueError(response.text)
     if response.status_code == 404:
-        logging.error("Workspace not found, please check your Workspace ID.")
         raise ValueError(response.text)
     if response.status_code == 405:
         logging.error("Method not supported.")
