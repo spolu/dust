@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+from dataclasses import asdict
 
 from dust_cli.argparse_utils import attached_to, run_subcommand
 from dust_cli.endpoints.get_conversation import get_conversation
@@ -10,7 +11,9 @@ def handle_conversation_retrieval(args: argparse.Namespace) -> None:
     """Retrieves an existing conversation."""
     logging.info(
         json.dumps(
-            get_conversation(args.api_key, args.workspace_id, args.conversation),
+            asdict(
+                get_conversation(args.api_key, args.workspace_id, args.conversation)
+            ),
             indent=2,
         )
     )
