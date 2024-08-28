@@ -7,8 +7,8 @@ import argcomplete
 import coloredlogs
 
 from dust_cli.__version__ import __version__
-from scripts.endpoints import endpoints
 from scripts.logger_config import LOGGING_CONFIG
+from scripts.subcommands import subcommands
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -37,7 +37,7 @@ def get_parser() -> argparse.ArgumentParser:
         required=True,
     )
 
-    for subcommand, set_subparser in endpoints.items():
+    for subcommand, set_subparser in subcommands.items():
         set_subparser(subparsers.add_parser(subcommand, help=set_subparser.__doc__))
 
     parser_version = subparsers.add_parser("version", help="Get current version.")
