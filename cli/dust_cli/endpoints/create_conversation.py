@@ -6,7 +6,7 @@ from requests import post
 from dust_cli.request_helper import make_request, get_timezone
 
 
-def create_conversation(
+def create_conversation_with_message(
     api_key: str, workspace_id: str, message: str, user: str
 ) -> dict[str, Any]:
     """Makes a request that creates a new conversation."""
@@ -32,6 +32,23 @@ def create_conversation(
                     },
                     "mentions": [{"configurationId": "dust"}],
                 },
+                "contentFragments": [],
+            },
+        ).text
+    )
+
+
+def create_conversation(api_key: str, workspace_id: str) -> dict[str, Any]:
+    """Makes a request that creates a new conversation."""
+    return json.loads(
+        make_request(
+            post,
+            "assistant/conversations",
+            api_key=api_key,
+            workspace_id=workspace_id,
+            body={
+                "title": None,
+                "visibility": "workspace",
                 "contentFragments": [],
             },
         ).text

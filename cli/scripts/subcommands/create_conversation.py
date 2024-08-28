@@ -3,7 +3,7 @@ import json
 import logging
 
 from dust_cli.argparse_utils import attached_to, run_subcommand
-from dust_cli.endpoints.create_conversation import create_conversation
+from dust_cli.endpoints.create_conversation import create_conversation_with_message
 
 
 def handle_conversation_creation(args: argparse.Namespace) -> None:
@@ -11,7 +11,7 @@ def handle_conversation_creation(args: argparse.Namespace) -> None:
     # TODO: share typing with the API
     logging.info(
         json.dumps(
-            create_conversation(
+            create_conversation_with_message(
                 args.api_key, args.workspace_id, args.message, args.user
             ),
             indent=2,
