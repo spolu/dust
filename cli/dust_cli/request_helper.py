@@ -1,8 +1,22 @@
 import logging
 import os
+from datetime import datetime
 from typing import Any, Optional, Callable
 
 import requests
+from pytz import all_timezones, timezone
+
+
+def get_timezone() -> str:
+    local_timezone = datetime.now().astimezone().tzinfo
+    return next(
+        (
+            tz
+            for tz in all_timezones
+            if timezone(tz).localize(datetime.now()).tzinfo == local_timezone
+        ),
+        "UTC",
+    )
 
 
 def make_request(

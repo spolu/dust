@@ -6,12 +6,14 @@ authors = ["aubin-tchoi <aubin.tchoi@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.8 <3.13"
+python = ">=3.10 <3.13"
 coloredlogs = "^15.0.1"
 urllib3 = "1.26.6"
 tqdm = "^4.66.2"
 argcomplete = "^3.3.0"
 requests = "^2.32.3"
+python-dateutil = "^2.9.0.post0"
+pytz = "^2024.1"
 
 [tool.poetry.group.dev]
 optional = true
