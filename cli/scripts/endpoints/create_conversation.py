@@ -2,42 +2,17 @@ import argparse
 import json
 import logging
 
-from requests import post
-
 from dust_cli.argparse_utils import attached_to, run_subcommand
-from dust_cli.request_helper import make_request, get_timezone
+from dust_cli.endpoints.create_conversation import create_conversation
 
 
-def create_conversation(args: argparse.Namespace) -> None:
+def handle_conversation_creation(args: argparse.Namespace) -> None:
     """Creates a new conversation."""
     # TODO: share typing with the API
     logging.info(
         json.dumps(
-            json.loads(
-                make_request(
-                    post,
-                    "assistant/conversations",
-                    api_key=args.api_key,
-                    workspace_id=args.workspace_id,
-                    body={
-                        "title": None,
-                        "visibility": "workspace",
-                        "message": {
-                            "content": args.message,
-                            "context": {
-                                # TODO: check how the values here are set and used
-                                "timezone": get_timezone(),
-                                "profilePictureUrl": "",
-                                "email": "",
-                                "origin": "slack",  # TODO: this is arbitrary, maybe define a new origin
-                                "fullName": "",
-                                "username": args.user,
-                            },
-                            "mentions": [],
-                        },
-                        "contentFragments": [],
-                    },
-                ).content.decode()
+            create_conversation(
+                args.api_key, args.workspace_id, args.message, args.user
             ),
             indent=2,
         )
@@ -45,7 +20,7 @@ def create_conversation(args: argparse.Namespace) -> None:
 
 
 # noinspection PyUnusedLocal
-@attached_to(create_conversation)
+@attached_to(handle_conversation_creation)
 def add_create_conversation_args(parser: argparse.ArgumentParser) -> None:
     """Adds the arguments specific to the endpoint that creates conversations."""
     parser.add_argument(
