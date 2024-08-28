@@ -11,11 +11,11 @@ def handle_message_creation(args: argparse.Namespace) -> None:
     logging.info(
         json.dumps(
             create_message(
-                args.api_key,
-                args.workspace_id,
-                args.message,
-                args.user,
-                args.conversation,
+                api_key=args.api_key,
+                workspace_id=args.workspace_id,
+                message=args.message,
+                user=args.user,
+                conversation=args.conversation,
             ),
             indent=4,
         )

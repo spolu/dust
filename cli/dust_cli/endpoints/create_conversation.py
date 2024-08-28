@@ -7,7 +7,7 @@ from dust_cli.response_parsers import Conversation
 
 
 def create_conversation_with_message(
-    api_key: str, workspace_id: str, message: str, user: str
+    api_key: str, workspace_id: str, message: str, user: str, assistant: str = "helper"
 ) -> Conversation:
     """Makes a request that creates a new conversation."""
     return Conversation(
@@ -31,7 +31,7 @@ def create_conversation_with_message(
                             "fullName": "",
                             "username": user,
                         },
-                        "mentions": [{"configurationId": "dust"}],
+                        "mentions": [{"configurationId": assistant}],
                     },
                     "contentFragments": [],
                 },

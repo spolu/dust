@@ -7,7 +7,13 @@ from dust_cli.request_helper import make_request, get_timezone
 
 
 def create_message(
-    api_key: str, workspace_id: str, message: str, user: str, conversation: str
+    *,
+    api_key: str,
+    workspace_id: str,
+    message: str,
+    user: str,
+    conversation: str,
+    assistant: str = "helper",
 ) -> dict[str, Any]:
     """Creates a new conversation."""
     # TODO: share typing with the API
@@ -28,7 +34,7 @@ def create_message(
                     "fullName": "",
                     "username": user,
                 },
-                "mentions": [{"configurationId": "dust"}],
+                "mentions": [{"configurationId": assistant}],
             },
         ).text
     )

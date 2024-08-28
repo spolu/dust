@@ -18,5 +18,5 @@ def get_conversation(
                 api_key=api_key,
                 workspace_id=workspace_id,
             ).text
-        )
+        )["conversation"]
     )
