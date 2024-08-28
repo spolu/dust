@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
+import json
+from dataclasses import dataclass, fields, asdict
 from typing import Optional, Literal, Any
 
 ModelId = int
@@ -19,6 +20,9 @@ class Workspace:
     defaultEmbeddingProvider: Any
     flags: list
     ssoEnforced: bool = False
+
+    def __str__(self) -> str:
+        return json.dumps(asdict(self), indent=2)
 
 
 @dataclass
@@ -40,3 +44,6 @@ class Conversation:
                     setattr(self, f.name, Workspace(**value))
             except TypeError:
                 pass
+
+    def __str__(self) -> str:
+        return json.dumps(asdict(self), indent=2)
