@@ -23,7 +23,7 @@ mypy = "^1.11.2"
 ruff = "^0.6.2"
 
 [tool.poetry.scripts]
-cli = "scripts.cli:main"
+dust-cli = "scripts.cli:main"
 
 [build-system]
 requires = ["poetry-core"]
