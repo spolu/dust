@@ -6,7 +6,7 @@ from typing import Optional
 import argcomplete
 import coloredlogs
 
-from dust_cli import __version__
+from dust_cli.__version__ import __version__
 from scripts.endpoints import endpoints
 from scripts.logger_config import LOGGING_CONFIG
 
@@ -25,7 +25,7 @@ def get_parser() -> argparse.ArgumentParser:
         "--workspace-id",
         "-w",
         type=str,
-        default=os.environ["DUST_API_KEY"],
+        default=os.environ["DUST_WORKSPACE"],
         help="Key used to authenticate with the Dust API.",
     )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose.")
@@ -41,7 +41,9 @@ def get_parser() -> argparse.ArgumentParser:
         set_subparser(subparsers.add_parser(subcommand, help=set_subparser.__doc__))
 
     parser_version = subparsers.add_parser("version", help="Get current version.")
-    parser_version.set_defaults(func=lambda args: logging.info(__version__))
+    parser_version.set_defaults(
+        func=lambda args: logging.info(f"Dust CLI version {__version__}")
+    )
     argcomplete.autocomplete(parser)
 
     return parser
