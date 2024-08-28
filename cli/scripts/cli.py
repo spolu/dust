@@ -25,7 +25,7 @@ def get_parser() -> argparse.ArgumentParser:
         "--workspace-id",
         "-w",
         type=str,
-        default=os.environ["DUST_WORKSPACE"],
+        default=os.environ.get("DUST_WORKSPACE"),
         help="Key used to authenticate with the Dust API.",
     )
     parser.add_argument("--verbose", action="store_true", help="Enable verbose.")
@@ -52,10 +52,13 @@ def get_parser() -> argparse.ArgumentParser:
 def main(args: Optional[argparse.Namespace] = None) -> int:
     args = args or get_parser().parse_args()
     coloredlogs.install(**LOGGING_CONFIG)
+
     if args.api_key is None:
         raise ValueError("No API key provided.")
     if args.dev:
         os.environ["DUST_CLI_DEV"] = "True"
+    if not args.workspace_id:
+        raise ValueError("No workspace selected.")
 
     if hasattr(args, "verbose") and not args.verbose:
         coloredlogs.set_level(logging.INFO)
