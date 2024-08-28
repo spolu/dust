@@ -8,7 +8,6 @@ from dust_cli.endpoints.create_message import create_message
 
 def handle_message_creation(args: argparse.Namespace) -> None:
     """Creates a new conversation."""
-    # TODO: share typing with the API
     logging.info(
         json.dumps(
             create_message(
@@ -26,7 +25,7 @@ def handle_message_creation(args: argparse.Namespace) -> None:
 # noinspection PyUnusedLocal
 @attached_to(handle_message_creation)
 def add_create_message_args(parser: argparse.ArgumentParser) -> None:
-    """Adds the arguments specific to the endpoint that creates conversations."""
+    """Adds the arguments specific to the endpoint that creates messages."""
     parser.add_argument(
         "--message", "-m", type=str, required=True, help="The content of the message."
     )
