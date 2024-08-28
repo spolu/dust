@@ -2,13 +2,15 @@ import argparse
 import json
 import logging
 
+import requests
+
 from dust_cli.argparse_utils import attached_to, run_subcommand
 from dust_cli.endpoints import (
-    get_conversation,
     list_assistants,
     create_conversation,
     create_message,
 )
+from dust_cli.endpoints.get_conversation_events import stream_conversation_events
 
 
 def select_assistant(args: argparse.Namespace) -> str:
@@ -22,6 +24,13 @@ def select_assistant(args: argparse.Namespace) -> str:
     selected_assistant = assistants[selected_index - 1]
     logging.info(f"Selected {selected_assistant.name}.\n")
     return selected_assistant.sId
+
+
+def log_content(response: requests.Response, *args, **kwargs) -> None:
+    logging.info(response.text)
+    json_start = '{"eventId":'
+    for subjson in response.text[:-12].split(json_start):
+        logging.info(json.dumps(json_start + subjson, indent=2))
 
 
 def chat(args: argparse.Namespace) -> None:
@@ -40,6 +49,13 @@ def chat(args: argparse.Namespace) -> None:
                 user=conversation.owner.name,
                 conversation=conversation.sId,
                 assistant=args.assistant,
+            )
+            logging.debug("Message created.")
+            stream_conversation_events(
+                args.api_key,
+                args.workspace_id,
+                conversation.sId,
+                hooks=[log_content],
             )
         except KeyboardInterrupt:
             pass

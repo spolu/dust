@@ -11,6 +11,9 @@ from scripts.logger_config import LOGGING_CONFIG
 from scripts.subcommands import subcommands
 
 
+# TODO: use a single requests.Session across all subsequent calls
+
+
 def get_parser() -> argparse.ArgumentParser:
     """Parses the command line arguments and produces a help message triggered with --help or -h."""
     parser = argparse.ArgumentParser(description="Dust CLI.")

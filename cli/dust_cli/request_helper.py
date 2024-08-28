@@ -49,6 +49,36 @@ def make_request(
     return handle_common_error_codes(response)
 
 
+def stream_request(
+    endpoint: str,
+    api_key: str,
+    workspace_id: str,
+    hooks: list[Callable[[requests.Response], Any]],
+) -> None:
+    """Makes a streaming request to the Dust API."""
+    is_dev = bool(os.environ.get("DUST_CLI_DEV"))
+    base_url = f"{'http://localhost:3000' if is_dev else 'https://dust.tt'}/api/v1/w"
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "authorization": f"Bearer {api_key}",
+    }
+
+    try:
+        with requests.get(
+            f"{base_url}/{workspace_id}/{endpoint.strip('/')}",
+            headers=headers,
+            stream=True,
+        ) as r:
+            for line in r.iter_lines():
+                if line:
+                    for hook in hooks:
+                        hook(line)
+    except AttributeError as e:
+        logging.debug(e)
+        return
+
+
 def handle_common_error_codes(response: requests.Response) -> requests.Response:
     # TODO: add basic logging here
     if response.status_code == 200:
