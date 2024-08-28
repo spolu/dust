@@ -1,5 +1,4 @@
 import argparse
-import json
 import logging
 
 from dust_cli.argparse_utils import attached_to, run_subcommand
@@ -8,12 +7,10 @@ from dust_cli.endpoints import list_assistants
 
 def handle_assistants_listing(args: argparse.Namespace) -> None:
     """Lists the assistants that are available."""
-    logging.info(
-        json.dumps(
-            list_assistants(args.api_key, args.workspace_id),
-            indent=2,
-        )
-    )
+    assistants = list_assistants(args.api_key, args.workspace_id)
+    logging.info(f"Found {len(assistants)} assistants:")
+    for assistant in assistants:
+        logging.info(f"  - {assistant.minimal_info()}")
 
 
 # noinspection PyUnusedLocal

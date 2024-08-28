@@ -47,3 +47,50 @@ class Conversation:
 
     def __str__(self) -> str:
         return json.dumps(asdict(self), indent=2)
+
+
+@dataclass
+class Model:
+    providerId: str
+    modelId: str
+    temperature: float
+
+    def __str__(self) -> str:
+        return json.dumps(asdict(self), indent=2)
+
+
+@dataclass
+class AgentConfiguration:
+    id: int
+    sId: str
+    version: int
+    versionCreatedAt: Optional[int]
+    versionAuthorId: Optional[str]
+    name: str
+    description: str
+    instructions: str
+    pictureUrl: str
+    status: str
+    userListStatus: str
+    scope: str
+    model: Model
+    actions: list
+    maxStepsPerRun: int
+    visualizationEnabled: bool
+    templateId: Optional[str]
+
+    def __post_init__(self):
+        """Automatically casts class attributes when possible, which does not cover type generics."""
+        for f in fields(self):
+            value = getattr(self, f.name)
+            try:
+                if f.type == "Model" and not isinstance(value, Model):
+                    setattr(self, f.name, Model(**value))
+            except TypeError:
+                pass
+
+    def minimal_info(self) -> str:
+        return f"{self.name} ({self.model.modelId}): {self.description}"
+
+    def __str__(self) -> str:
+        return json.dumps(asdict(self), indent=2)
