@@ -4,7 +4,7 @@ import logging
 from dataclasses import asdict
 
 from dust_cli.argparse_utils import attached_to, run_subcommand
-from dust_cli.endpoints.get_conversation import get_conversation
+from dust_cli.endpoints import get_conversation
 
 
 def handle_conversation_retrieval(args: argparse.Namespace) -> None:

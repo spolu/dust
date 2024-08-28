@@ -3,7 +3,7 @@ import json
 import logging
 
 from dust_cli.argparse_utils import attached_to, run_subcommand
-from dust_cli.endpoints.list_assistants import list_assistants
+from dust_cli.endpoints import list_assistants
 
 
 def handle_assistants_listing(args: argparse.Namespace) -> None:

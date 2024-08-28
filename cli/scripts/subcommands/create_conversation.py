@@ -4,7 +4,7 @@ import logging
 from dataclasses import asdict
 
 from dust_cli.argparse_utils import attached_to, run_subcommand
-from dust_cli.endpoints.create_conversation import (
+from dust_cli.endpoints import (
     create_conversation_with_message,
     create_conversation,
 )

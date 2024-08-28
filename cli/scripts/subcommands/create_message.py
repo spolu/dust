@@ -3,7 +3,7 @@ import json
 import logging
 
 from dust_cli.argparse_utils import attached_to, run_subcommand
-from dust_cli.endpoints.create_message import create_message
+from dust_cli.endpoints import create_message
 
 
 def handle_message_creation(args: argparse.Namespace) -> None:
