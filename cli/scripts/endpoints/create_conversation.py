@@ -1,6 +1,6 @@
 import argparse
 
-from dust_cli.argparse_utils import attached_to, run_entry_point
+from dust_cli.argparse_utils import attached_to, run_subcommand
 from dust_cli.request_helper import make_request
 
 
@@ -23,7 +23,7 @@ def add_create_conversation_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
-main = run_entry_point(add_create_conversation_args)
+main = run_subcommand(add_create_conversation_args)
 
 if __name__ == "__main__":
     main()

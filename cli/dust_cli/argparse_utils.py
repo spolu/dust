@@ -26,7 +26,7 @@ def attached_to(
     return attached_to_func
 
 
-def run_entry_point(parser_function: ParserFunction) -> Callable[[], None]:
+def run_subcommand(parser_function: ParserFunction) -> Callable[[], None]:
     @wraps(parser_function)
     def inner_func() -> None:
         parser_function((parser := argparse.ArgumentParser(parser_function.__doc__)))
