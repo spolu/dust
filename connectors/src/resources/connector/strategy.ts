@@ -45,7 +45,7 @@ export interface ConnectorProviderModelM {
   slack: SlackConfigurationModel;
   webcrawler: WebCrawlerConfigurationModel;
   snowflake: SnowflakeConfigurationModel;
-  zendesk: ZendeskConfigurationModel;
+  zendesk: ZendeskConfiguration;
 }
 
 export type ConnectorProviderModelMapping = {
