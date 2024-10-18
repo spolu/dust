@@ -1,9 +1,8 @@
-import { resolve } from "path";
-
-import type { IntercomHelpCenterType } from "@connectors/connectors/intercom/lib/types";
 import type {
   ZendeskArticlesResponse,
   ZendeskArticleType,
+  ZendeskBrandsResponse,
+  ZendeskBrandType,
   ZendeskCategoriesResponse,
   ZendeskCategoryType,
   ZendeskHelpCenterType,
@@ -89,6 +88,82 @@ async function callZendeskApi({
   }
 }
 
+export async function fetchZendeskBrands({
+  subdomain,
+  accessToken,
+}: {
+  subdomain: string;
+  accessToken: string;
+}): Promise<ZendeskBrandType[]> {
+  let response: ZendeskBrandsResponse;
+  let hasMore: boolean;
+  let page = 1;
+  const brands: ZendeskBrandType[] = [];
+
+  do {
+    try {
+      const fetchResponse = await callZendeskApi({
+        subdomain,
+        accessToken,
+        path: "brands.json",
+        method: "GET",
+      });
+      response = await fetchResponse.json();
+
+      if (response.brands && Array.isArray(response.brands)) {
+        brands.push(...response.brands);
+        logger.info(
+          {
+            page,
+            fetchedCount: response.brands.length,
+            totalFetched: brands.length,
+          },
+          `[Zendesk] Fetched brands page ${page}`
+        );
+      } else {
+        logger.error(
+          { page, response },
+          "[Zendesk] No brands found in the response"
+        );
+      }
+
+      hasMore = !!response?.next_page;
+      if (hasMore) {
+        page += 1;
+      }
+    } catch (error) {
+      logger.error({ page, error }, "[Zendesk] Error fetching brands");
+      throw error;
+    }
+  } while (hasMore);
+
+  logger.info(
+    {
+      totalBrands: brands.length,
+    },
+    "[Zendesk] Finished fetching all brands"
+  );
+
+  return brands;
+}
+
+export async function fetchZendeskBrand({
+  subdomain,
+  accessToken,
+  brandId,
+}: {
+  subdomain: string;
+  accessToken: string;
+  brandId: string;
+}): Promise<ZendeskHelpCenterType | null> {
+  return callZendeskApi({
+    subdomain,
+    accessToken,
+    path: `brands/${brandId}.json`,
+    method: "GET",
+  }).then((response) => response.json.brand);
+}
+
 export async function fetchZendeskHelpCenters({
   subdomain,
   accessToken,
@@ -122,7 +197,7 @@ export async function fetchZendeskHelpCenter({
     accessToken,
     path: `help_centers/${helpCenterId}.json`,
     method: "GET",
-  });
+  }).then((response) => response.json.help_center);
 }
 
 export async function fetchZendeskCategories({

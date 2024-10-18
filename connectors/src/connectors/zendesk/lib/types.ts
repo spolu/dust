@@ -1,3 +1,33 @@
+export type ZendeskBrandsResponse = {
+  brands: ZendeskBrandType[];
+  next_page: string | null;
+  previous_page: string | null;
+  count: number;
+};
+
+export type ZendeskBrandType = {
+  id: number;
+  url: string;
+  name: string;
+  brand_url: string;
+  subdomain: string;
+  host_mapping: string;
+  has_help_center: boolean;
+  help_center_state: string;
+  active: boolean;
+  default: boolean;
+  logo: {
+    url: string;
+    content_type: string;
+    size: number;
+    width: number;
+    height: number;
+  } | null;
+  ticket_form_ids: number[];
+  created_at: string;
+  updated_at: string;
+};
+
 export type ZendeskHelpCenterType = {
   id: number;
   name: string;
