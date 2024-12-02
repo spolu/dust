@@ -30,6 +30,7 @@ import type {
   RetrievalActionType,
   UserType,
   WebsearchActionType,
+  WithRank,
   WorkspaceType,
 } from "@dust-tt/types";
 import {
@@ -67,8 +68,10 @@ import {
   mentionDirective,
 } from "@app/components/markdown/MentionBlock";
 import {
+  getInteractiveDocumentPlugin,
   getVisualizationPlugin,
-  sanitizeVisualizationContent,
+  interactiveDocumentDirective,
+  sanitizeContent,
   visualizationDirective,
 } from "@app/components/markdown/VisualizationBlock";
 import { useEventSource } from "@app/hooks/useEventSource";
@@ -83,7 +86,7 @@ interface AgentMessageProps {
   conversationId: string;
   isInModal: boolean;
   isLastMessage: boolean;
-  message: AgentMessageType;
+  message: WithRank<AgentMessageType>;
   messageFeedback: ConversationMessageFeedbackSelectorProps;
   owner: WorkspaceType;
   user: UserType;
@@ -448,6 +451,8 @@ export function AgentMessage({
   ]);
   const { configuration: agentConfiguration } = agentMessageToRender;
 
+  const messageVersion = message.rank * 1000 + message.version;
+
   const additionalMarkdownComponents: Components = useMemo(
     () => ({
       visualization: getVisualizationPlugin(
@@ -456,14 +461,23 @@ export function AgentMessage({
         conversationId,
         message.sId
       ),
+      doc: getInteractiveDocumentPlugin(
+        agentConfiguration.sId,
+        messageVersion
+      ),
       sup: CiteBlock,
       mention: MentionBlock,
     }),
-    [owner, conversationId, message.sId, agentConfiguration.sId]
+    [owner, conversationId, message.sId, agentConfiguration.sId, messageVersion]
   );
 
   const additionalMarkdownPlugins: PluggableList = useMemo(
-    () => [mentionDirective, getCiteDirective(), visualizationDirective],
+    () => [
+      mentionDirective,
+      getCiteDirective(),
+      visualizationDirective,
+      interactiveDocumentDirective,
+    ],
     []
   );
 
@@ -582,7 +596,7 @@ export function AgentMessage({
                 }}
               >
                 <Markdown
-                  content={sanitizeVisualizationContent(agentMessage.content)}
+                  content={sanitizeContent(agentMessage.content)}
                   isStreaming={
                     streaming && lastTokenClassification === "tokens"
                   }

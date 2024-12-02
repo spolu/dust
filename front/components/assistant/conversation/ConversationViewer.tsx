@@ -9,6 +9,7 @@ import type {
   MessageWithContentFragmentsType,
   UserMessageNewEvent,
   UserType,
+  WithRank,
   WorkspaceType,
 } from "@dust-tt/types";
 import { isContentFragmentType } from "@dust-tt/types";
@@ -317,7 +318,7 @@ const ConversationViewer = React.forwardRef<
   return (
     <div
       className={classNames(
-        "flex w-full max-w-4xl flex-1 flex-col justify-start gap-2 pb-4",
+        "flex h-full w-full max-w-4xl flex-1 flex-col justify-start gap-2 pb-4",
         isFading ? "animate-fadeout" : "",
         isInModal ? "pt-4" : "sm:px-4"
       )}
@@ -377,8 +378,8 @@ export default ConversationViewer;
  */
 const groupMessagesByType = (
   messages: FetchConversationMessagesResponse[]
-): MessageWithContentFragmentsType[][] => {
-  const groupedMessages: MessageWithContentFragmentsType[][] = [];
+): WithRank<MessageWithContentFragmentsType>[][] => {
+  const groupedMessages: WithRank<MessageWithContentFragmentsType>[][] = [];
   let tempContentFragments: ContentFragmentType[] = [];
 
   messages
@@ -387,7 +388,7 @@ const groupMessagesByType = (
       if (isContentFragmentType(message)) {
         tempContentFragments.push(message); // Collect content fragments.
       } else {
-        let messageWithContentFragments: MessageWithContentFragmentsType;
+        let messageWithContentFragments: WithRank<MessageWithContentFragmentsType>;
         if (isUserMessageType(message)) {
           // Attach collected content fragments to the user message.
           messageWithContentFragments = {
