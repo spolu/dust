@@ -3,6 +3,7 @@ import {
   ConfluenceClientError,
   isConfluenceNotFoundError,
 } from "@dust-tt/types";
+import { cacheWithRedis } from "@dust-tt/types/src";
 import { Op } from "sequelize";
 import TurndownService from "turndown";
 
@@ -266,7 +267,12 @@ export async function confluenceCheckAndUpsertPageActivity({
     return false;
   }
 
-  const hasReadRestrictions = await pageHasReadRestrictions(client, pageId);
+  const hasReadRestrictions = await cacheWithRedis(
+    pageHasReadRestrictions,
+    (_, pageId) => pageId,
+    60 * 60 * 1000
+  )(client, pageId);
+
   if (hasReadRestrictions) {
     localLogger.info("Skipping restricted Confluence page.");
     return false;
