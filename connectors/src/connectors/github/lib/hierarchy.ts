@@ -72,9 +72,9 @@ async function getGithubCodeFileParentIds(
       file.parentInternalId,
       repoId
     );
-    return [file.documentId, file.parentInternalId, ...parents];
+    return [file.parentInternalId, ...parents];
   } else if (file.parentInternalId === `github-code-${repoId}`) {
-    return [file.documentId, `${repoId}`, `github-code-${repoId}`];
+    return [`${repoId}`, `github-code-${repoId}`];
   }
   return [];
 }
