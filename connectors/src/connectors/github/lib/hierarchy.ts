@@ -42,9 +42,9 @@ async function getGithubCodeDirectoryParentIds(
       directory.parentInternalId,
       repoId
     );
-    return [directory.internalId, directory.parentInternalId, ...parents];
+    return [directory.parentInternalId, ...parents];
   } else if (directory.parentInternalId === `github-code-${repoId}`) {
-    return [directory.internalId, `github-code-${repoId}`, `${repoId}`];
+    return [`github-code-${repoId}`, `${repoId}`];
   }
   return [];
 }
