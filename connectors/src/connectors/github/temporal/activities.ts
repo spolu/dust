@@ -699,6 +699,7 @@ export async function githubRepoGarbageCollectActivity(
     },
   });
 
+  // Delete the Repository folder node
   await deleteFolderNode({
     dataSourceConfig,
     folderId: repoId,
@@ -881,7 +882,7 @@ async function garbageCollectCodeSync(
         },
       },
     });
-    // Also delete data source folders
+    // Also delete folder nodes
     const fq = new PQueue({ concurrency: 8 });
     directoriesToDelete.forEach((d) =>
       fq.add(async () => {
@@ -894,7 +895,7 @@ async function garbageCollectCodeSync(
     );
   }
 
-  // Delete the "Code" folder node
+  // Delete the Code folder
   await deleteFolderNode({
     dataSourceConfig,
     folderId: `github-code-${repoId}`,
@@ -962,7 +963,7 @@ export async function githubCodeSyncActivity({
       },
     });
 
-    // Delete the data source folder too
+    // Delete the Repository folder too
     await deleteFolderNode({
       dataSourceConfig,
       folderId: repoId.toString(),
@@ -999,7 +1000,7 @@ export async function githubCodeSyncActivity({
   githubCodeRepository.lastSeenAt = codeSyncStartedAt;
   await githubCodeRepository.save();
 
-  // Add as dataSource folder
+  // Create the Repository folder node
   await upsertFolderNode({
     dataSourceConfig,
     folderId: githubCodeRepository.repoId,
@@ -1057,6 +1058,7 @@ export async function githubCodeSyncActivity({
         },
       });
 
+      // Delete the Repository folder too
       await deleteFolderNode({
         dataSourceConfig,
         folderId: repoId.toString(),
@@ -1238,6 +1240,7 @@ export async function githubCodeSyncActivity({
           });
         }
 
+        // Create the folder node
         await upsertFolderNode({
           dataSourceConfig,
           folderId: d.internalId,
@@ -1290,12 +1293,14 @@ export async function githubCodeSyncActivity({
     );
 
     // Create the Code folder node.
-    await upsertFolderNode({
-      dataSourceConfig,
-      folderId: `github-code-${repoId}`,
-      title: "Code",
-      parents: [`github-code-${repoId}`, repoId.toString()],
-    });
+    if (files.length > 0 || directories.length > 0) {
+      await upsertFolderNode({
+        dataSourceConfig,
+        folderId: `github-code-${repoId}`,
+        title: "Code",
+        parents: [`github-code-${repoId}`, repoId.toString()],
+      });
+    }
 
     // Finally we update the repository updatedAt value.
     if (repoUpdatedAt) {
