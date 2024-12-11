@@ -27,12 +27,12 @@ import { newWebhookSignal } from "@connectors/connectors/github/temporal/signals
 import { getCodeSyncWorkflowId } from "@connectors/connectors/github/temporal/utils";
 import { dataSourceConfigFromConnector } from "@connectors/lib/api/data_source_config";
 import {
+  deleteFolderNode,
   deleteFromDataSource,
   renderDocumentTitleAndContent,
   renderMarkdownSection,
-  upsertToDatasource,
-  deleteFolderNode,
   upsertFolderNode,
+  upsertToDatasource,
 } from "@connectors/lib/data_sources";
 import { ExternalOAuthTokenError } from "@connectors/lib/error";
 import {
