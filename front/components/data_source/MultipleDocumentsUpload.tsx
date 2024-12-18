@@ -4,7 +4,7 @@ import type {
   LightWorkspaceType,
   PlanType,
 } from "@dust-tt/types";
-import { Err, supportedPlainTextExtensions } from "@dust-tt/types";
+import { Err, getSupportedNonImageFileExtensions } from "@dust-tt/types";
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -126,6 +126,7 @@ export const MultipleDocumentsUpload = ({
           total: fileBlobs.length,
           completed: i++,
         });
+        // TODO : use an upsert endpoint here that will handle the upsert of the file
 
         // get processed text
         const content = await getFileProcessedContent(blob.fileId);
@@ -144,6 +145,7 @@ export const MultipleDocumentsUpload = ({
           title: blob.filename,
           mime_type: blob.contentType ?? undefined,
           timestamp: null,
+          parent_id: null,
           parents: [blob.filename],
           section: {
             prefix: null,
@@ -229,7 +231,7 @@ export const MultipleDocumentsUpload = ({
       <input
         className="hidden"
         type="file"
-        accept={supportedPlainTextExtensions.join(", ")}
+        accept={getSupportedNonImageFileExtensions().join(", ")}
         ref={fileInputRef}
         multiple={true}
         onChange={handleFileChange}

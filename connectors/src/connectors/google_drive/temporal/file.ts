@@ -21,13 +21,13 @@ import {
   handleTextExtraction,
   handleTextFile,
 } from "@connectors/connectors/shared/file";
-import { MAX_FILE_SIZE_TO_DOWNLOAD } from "@connectors/lib/data_sources";
 import {
   MAX_DOCUMENT_TXT_LEN,
+  MAX_FILE_SIZE_TO_DOWNLOAD,
   MAX_LARGE_DOCUMENT_TXT_LEN,
   renderDocumentTitleAndContent,
   sectionLength,
-  upsertToDatasource,
+  upsertDataSourceDocument,
 } from "@connectors/lib/data_sources";
 import {
   GoogleDriveConfig,
@@ -182,9 +182,14 @@ async function handleFileExport(
   if (file.mimeType === "text/plain") {
     result = handleTextFile(res.data, maxDocumentLen);
   } else if (file.mimeType === "text/csv") {
-    const parents = (
-      await getFileParentsMemoized(connectorId, oauth2client, file, startSyncTs)
-    ).map((f) => f.id);
+    const parentGoogleIds = await getFileParentsMemoized(
+      connectorId,
+      oauth2client,
+      file,
+      startSyncTs
+    );
+
+    const parents = parentGoogleIds.map((parent) => getDocumentId(parent));
 
     result = await handleCsvFile({
       data: res.data,
@@ -195,7 +200,8 @@ async function handleFileExport(
       dataSourceConfig,
       provider: "google_drive",
       connectorId,
-      parents: [file.id, ...parents],
+      // TODO(kw_search) remove legacy parentGoogleIds
+      parents: [...parents, ...parentGoogleIds],
     });
   } else {
     result = await handleTextExtraction(res.data, localLogger, file.mimeType);
@@ -470,20 +476,24 @@ async function upsertGdriveDocument(
   const documentLen = documentContent ? sectionLength(documentContent) : 0;
 
   if (documentLen > 0 && documentLen <= maxDocumentLen) {
-    const parents = (
-      await getFileParentsMemoized(connectorId, oauth2client, file, startSyncTs)
-    ).map((f) => f.id);
-    parents.push(file.id);
-    parents.reverse();
+    const parentGoogleIds = await getFileParentsMemoized(
+      connectorId,
+      oauth2client,
+      file,
+      startSyncTs
+    );
 
-    await upsertToDatasource({
+    const parents = parentGoogleIds.map((parent) => getDocumentId(parent));
+
+    await upsertDataSourceDocument({
       dataSourceConfig,
       documentId,
       documentContent: content,
       documentUrl: file.webViewLink,
       timestampMs: file.updatedAtMs,
       tags,
-      parents,
+      // TODO(kw_search) remove legacy parentGoogleIds
+      parents: [...parents, ...parentGoogleIds],
       upsertContext: {
         sync_type: isBatchSync ? "batch" : "incremental",
       },

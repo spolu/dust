@@ -347,6 +347,7 @@ async function fetchWorkspaceAgentConfigurationsWithoutActions(
       }
       const relations = await AgentUserRelation.findAll({
         where: {
+          workspaceId: owner.id,
           userId,
           favorite: true,
         },
@@ -496,11 +497,6 @@ async function fetchWorkspaceAgentConfigurationsForView(
       actions.push(...processActionConfigurations);
     }
 
-    let template: TemplateResource | null = null;
-    if (agent.templateId) {
-      template = await TemplateResource.fetchByModelId(agent.templateId);
-    }
-
     const agentConfigurationType: AgentConfigurationType = {
       id: agent.id,
       sId: agent.sId,
@@ -522,7 +518,9 @@ async function fetchWorkspaceAgentConfigurationsForView(
       versionAuthorId: agent.authorId,
       maxStepsPerRun: agent.maxStepsPerRun,
       visualizationEnabled: agent.visualizationEnabled ?? false,
-      templateId: template?.sId ?? null,
+      templateId: agent.templateId
+        ? TemplateResource.modelIdToSId({ id: agent.templateId })
+        : null,
       groupIds: agent.groupIds.map((id) =>
         GroupResource.modelIdToSId({ id, workspaceId: owner.id })
       ),
@@ -617,8 +615,8 @@ export async function getAgentConfigurations<V extends "light" | "full">({
     }),
   ]);
 
-  // Filter out agents that the user does not have access to
-  // user should be in all groups that are in the agent's groupIds
+  // Filter out agents that the user does not have access to user should be in all groups that are
+  // in the agent's groupIds
   const allowedAgentConfigurations = dangerouslySkipPermissionFiltering
     ? allAgentConfigurations
     : allAgentConfigurations

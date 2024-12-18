@@ -10,6 +10,7 @@ use crate::providers::embedder::{EmbedderRequest, EmbedderVector};
 use crate::providers::provider::ProviderID;
 use crate::run::Credentials;
 use crate::search_filter::{Filterable, SearchFilter};
+use crate::search_stores::search_store::SearchStore;
 use crate::stores::store::{DocumentCreateParams, Store};
 use crate::utils;
 use anyhow::{anyhow, Result};
@@ -142,6 +143,7 @@ pub struct Document {
     pub title: String,
     pub mime_type: String,
     pub tags: Vec<String>,
+    pub parent_id: Option<String>,
     pub parents: Vec<String>,
     pub source_url: Option<String>,
     pub hash: String,
@@ -161,6 +163,7 @@ impl Document {
         title: &str,
         mime_type: &str,
         tags: &Vec<String>,
+        parent_id: &Option<String>,
         parents: &Vec<String>,
         source_url: &Option<String>,
         hash: &str,
@@ -174,6 +177,7 @@ impl Document {
             title: title.to_string(),
             mime_type: mime_type.to_string(),
             tags: tags.clone(),
+            parent_id: parent_id.clone(),
             parents: parents.clone(),
             source_url: source_url.clone(),
             hash: hash.to_string(),
@@ -216,6 +220,7 @@ impl From<Document> for Node {
             document.timestamp,
             &document.title,
             &document.mime_type,
+            document.parent_id,
             document.parents.clone(),
         )
     }
@@ -610,6 +615,7 @@ impl DataSource {
         source_url: &Option<String>,
         text: Section,
         preserve_system_tags: bool,
+        search_store: Box<dyn SearchStore + Sync + Send>,
     ) -> Result<Document> {
         let full_text = text.full_text();
         // Disallow preserve_system_tags=true if tags contains a string starting with the system
@@ -686,7 +692,8 @@ impl DataSource {
             title.as_deref().unwrap_or(document_id),
             mime_type.as_deref().unwrap_or("application/octet-stream"),
             &tags,
-            &parents,
+            &parents.get(1).cloned(),
+            parents,
             source_url,
             &document_hash,
             full_text.len() as u64,
@@ -725,7 +732,7 @@ impl DataSource {
                 &qdrant_clients,
                 &document_id,
                 &document_id_hash,
-                document,
+                document.clone(),
                 &document_hash,
                 &text,
                 // Cache is not used when writing to the shadow collection.
@@ -752,6 +759,9 @@ impl DataSource {
         store
             .create_data_source_document(&self.project, self.data_source_id.clone(), create_params)
             .await?;
+
+        // Upsert document in search index.
+        search_store.index_document(document.clone()).await?;
 
         // Clean-up old superseded versions.
         self.scrub_document_superseded_versions(store, &document_id)
@@ -1535,6 +1545,7 @@ impl DataSource {
                 // With top_k documents, we should be guaranteed to have at least top_k chunks, if
                 // we make the assumption that each document has at least one chunk.
                 Some((top_k, 0)),
+                false,
             )
             .await?;
 
@@ -1831,6 +1842,7 @@ impl DataSource {
                 None,
                 &None,
                 &None,
+                false,
             )
             .await?;
 
@@ -1887,6 +1899,7 @@ impl DataSource {
                 None,
                 &None,
                 &None,
+                false,
             )
             .await?;
 

@@ -147,11 +147,14 @@ export const config = {
  *                 items:
  *                   type: string
  *                 description: Tags to associate with the document.
+ *               parent_id:
+ *                 type: string
+ *                 description: Direct parent document ID to associate with the document.
  *               parents:
  *                 type: array
  *                 items:
  *                   type: string
- *                 description: Parent document IDs to associate with the document.
+ *                 description: 'Document and ancestor ids, with the following convention: parents[0] === documentId, parents[1] === parent_id, and then ancestors ids in order'
  *               timestamp:
  *                 type: number
  *                 description: Unix timestamp (in seconds) for the document (e.g. 1698225000). Can be null or omitted.
@@ -291,7 +294,11 @@ async function handler(
     }
   }
 
-  if (!dataSource || dataSource.space.sId !== spaceId) {
+  if (
+    !dataSource ||
+    dataSource.space.sId !== spaceId ||
+    !dataSource.canRead(auth)
+  ) {
     return apiError(req, res, {
       status_code: 404,
       api_error: {
@@ -478,6 +485,17 @@ async function handler(
         });
       }
 
+      if (r.data.parent_id && r.data.parents?.[1] !== r.data.parent_id) {
+        return apiError(req, res, {
+          status_code: 400,
+          api_error: {
+            type: "invalid_request_error",
+            message:
+              "Invalid parent id: parents[1] and parent_id should be equal",
+          },
+        });
+      }
+
       const statsDTags = [
         `data_source_id:${dataSource.id}`,
         `workspace_id:${owner.sId}`,
@@ -490,14 +508,17 @@ async function handler(
         statsDClient.increment("document_no_self_ref.count", 1, statsDTags);
       }
 
+      const documentId = req.query.documentId as string;
+
       if (r.data.async === true) {
         const enqueueRes = await enqueueUpsertDocument({
           upsertDocument: {
             workspaceId: owner.sId,
             dataSourceId: dataSource.sId,
-            documentId: req.query.documentId as string,
+            documentId,
             tags: r.data.tags || [],
-            parents: r.data.parents || [],
+            parentId: r.data.parent_id || null,
+            parents: r.data.parents || [documentId],
             timestamp: r.data.timestamp || null,
             sourceUrl,
             section,
@@ -536,7 +557,8 @@ async function handler(
           dataSourceId: dataSource.dustAPIDataSourceId,
           documentId: req.query.documentId as string,
           tags: r.data.tags || [],
-          parents: r.data.parents || [],
+          parentId: r.data.parent_id || null,
+          parents: r.data.parents || [documentId],
           sourceUrl,
           timestamp: r.data.timestamp || null,
           section,

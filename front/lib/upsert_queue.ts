@@ -22,6 +22,7 @@ export const EnqueueUpsertDocument = t.intersection([
     dataSourceId: t.string,
     documentId: t.string,
     tags: t.union([t.array(t.string), t.null]),
+    parentId: t.union([t.string, t.null, t.undefined]),
     parents: t.union([t.array(t.string), t.null]),
     sourceUrl: t.union([t.string, t.null]),
     timestamp: t.union([t.number, t.null]),
@@ -48,6 +49,7 @@ export const EnqueueUpsertTable = t.intersection([
     tableDescription: t.string,
     tableTimestamp: t.union([t.number, t.undefined, t.null]),
     tableTags: t.union([t.array(t.string), t.undefined, t.null]),
+    tableParentId: t.union([t.string, t.undefined, t.null]),
     tableParents: t.union([t.array(t.string), t.undefined, t.null]),
     csv: t.union([t.string, t.null]),
     truncate: t.boolean,
@@ -82,6 +84,15 @@ export async function enqueueUpsertDocument({
     "[UpsertQueue] Enqueueing document"
   );
 
+  if (
+    upsertDocument.parentId &&
+    upsertDocument.parents?.[1] !== upsertDocument.parentId
+  ) {
+    throw new Error(
+      "Invalid parent id: parents[1] and parentId should be equal"
+    );
+  }
+
   return enqueueUpsert({
     upsertItem: upsertDocument,
     upsertQueueId,
@@ -106,6 +117,15 @@ export async function enqueueUpsertTable({
     },
     "[UpsertQueue] Enqueueing table"
   );
+
+  if (
+    upsertTable.tableParentId &&
+    upsertTable.tableParents?.[1] !== upsertTable.tableParentId
+  ) {
+    throw new Error(
+      "Invalid parent id: parents[1] and tableParentId should be equal"
+    );
+  }
 
   return enqueueUpsert({
     upsertItem: upsertTable,

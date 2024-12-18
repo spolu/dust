@@ -620,6 +620,8 @@ export function ConnectorPermissionsModal({
   const [modalToShow, setModalToShow] = useState<
     "data_updated" | "edition" | "selection" | "deletion" | null
   >(null);
+  const [showDataConnectionDialog, setShowDataConnectionDialog] =
+    useState(false);
   const { activeSubscription } = useWorkspaceActiveSubscription({
     workspaceId: owner.sId,
     disabled: !isAdmin,
@@ -684,6 +686,7 @@ export function ConnectorPermissionsModal({
 
         // Display the data updated modal.
         setModalToShow("data_updated");
+        setShowDataConnectionDialog(true);
       } else {
         closeModal(false);
       }
@@ -757,21 +760,21 @@ export function ConnectorPermissionsModal({
       >
         <div className="mx-auto mt-4 flex w-full max-w-4xl grow flex-col gap-4">
           <div className="flex flex-row justify-end gap-2">
-            {isOAuthProvider(connector.type) ||
-              (connector.type === "snowflake" && (
-                <Button
-                  label={
-                    connector.type !== "snowflake"
-                      ? "Edit permissions"
-                      : "Edit connection"
-                  }
-                  variant="outline"
-                  icon={LockIcon}
-                  onClick={() => {
-                    setModalToShow("edition");
-                  }}
-                />
-              ))}
+            {(isOAuthProvider(connector.type) ||
+              connector.type === "snowflake") && (
+              <Button
+                label={
+                  connector.type !== "snowflake"
+                    ? "Edit permissions"
+                    : "Edit connection"
+                }
+                variant="outline"
+                icon={LockIcon}
+                onClick={() => {
+                  setModalToShow("edition");
+                }}
+              />
+            )}
             {MANAGED_DS_DELETABLE.includes(connector.type) && (
               <Button
                 label="Delete connection"
@@ -866,6 +869,26 @@ export function ConnectorPermissionsModal({
         }}
         connectorProvider={connector.type}
       />
+      <Dialog
+        alertDialog={true}
+        isOpen={showDataConnectionDialog}
+        title="Your data is being synchronized..."
+        onValidate={() => setShowDataConnectionDialog(false)}
+      >
+        <div>
+          Once synced, data can be added to:
+          <div className="mt-2">
+            <ul className="ml-4 list-disc">
+              <li>
+                <strong>Company Data</strong> for company-wide access
+              </li>
+              <li>
+                <strong>Restricted Spaces</strong> for custom access
+              </li>
+            </ul>
+          </div>
+        </div>
+      </Dialog>
     </>
   );
 }

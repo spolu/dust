@@ -114,7 +114,10 @@ import { apiError } from "@app/logger/withlogging";
  *                 type: array
  *                 items:
  *                   type: string
- *                 description: Parent tables of this table
+ *                   description: 'Table and ancestor ids, with the following convention: parents[0] === table_id, parents[1] === parent_id, and then ancestors ids in order'
+ *               parent_id:
+ *                 type: string
+ *                 description: Direct parent id of this table
  *               mime_type:
  *                 type: string
  *                 description: Mime type of the table
@@ -173,7 +176,11 @@ async function handler(
     }
   }
 
-  if (!dataSource || dataSource.space.sId !== spaceId) {
+  if (
+    !dataSource ||
+    dataSource.space.sId !== spaceId ||
+    !dataSource.canRead(auth)
+  ) {
     return apiError(req, res, {
       status_code: 404,
       api_error: {
@@ -233,6 +240,7 @@ async function handler(
             timestamp: table.timestamp,
             tags: table.tags,
             parents: table.parents,
+            parent_id: table.parent_id,
             mime_type: table.mime_type,
             title: table.title,
           };
@@ -240,6 +248,16 @@ async function handler(
       });
 
     case "POST":
+      if (!dataSource.canWrite(auth)) {
+        return apiError(req, res, {
+          status_code: 403,
+          api_error: {
+            type: "data_source_auth_error",
+            message: "You are not allowed to update data in this data source.",
+          },
+        });
+      }
+
       const r = UpsertDatabaseTableRequestSchema.safeParse(req.body);
 
       if (r.error) {
@@ -259,6 +277,7 @@ async function handler(
         timestamp,
         tags,
         parents,
+        parent_id: parentId,
         remote_database_table_id: remoteDatabaseTableId,
         remote_database_secret_id: remoteDatabaseSecretId,
       } = r.data;
@@ -354,6 +373,17 @@ async function handler(
         });
       }
 
+      if (parentId && parents?.[1] !== parentId) {
+        return apiError(req, res, {
+          status_code: 400,
+          api_error: {
+            type: "invalid_request_error",
+            message:
+              "Invalid parent id: parents[1] and parent_id should be equal",
+          },
+        });
+      }
+
       // Enforce that the table is a parent of itself by default.
       const upsertRes = await coreAPI.upsertTable({
         projectId: dataSource.dustAPIProjectId,
@@ -365,6 +395,7 @@ async function handler(
         tags: tags || [],
         // Table is a parent of itself by default.
         parents: parents || [tableId],
+        parentId: parentId ?? null,
         remoteDatabaseTableId: remoteDatabaseTableId ?? null,
         remoteDatabaseSecretId: remoteDatabaseSecretId ?? null,
         title,

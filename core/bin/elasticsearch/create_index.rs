@@ -1,12 +1,9 @@
 use std::collections::HashMap;
 
 use clap::{Parser, ValueEnum};
-use elasticsearch::auth::Credentials;
-use elasticsearch::http::transport::{SingleNodeConnectionPool, TransportBuilder};
+use dust::search_stores::search_store::ElasticsearchSearchStore;
 use elasticsearch::indices::{IndicesCreateParts, IndicesExistsParts};
-use elasticsearch::Elasticsearch;
 use http::StatusCode;
-use url::Url;
 
 #[derive(Parser, Debug, Clone, ValueEnum)]
 enum Region {
@@ -50,7 +47,7 @@ struct Args {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // parse args and env vars
     let args = Args::parse();
-    let index_alias = args.index_name;
+    let index_name = args.index_name;
     let index_version = args.index_version;
 
     let url = std::env::var("ELASTICSEARCH_URL").expect("ELASTICSEARCH_URL must be set");
@@ -62,19 +59,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let region = std::env::var("DUST_REGION").expect("DUST_REGION must be set");
 
     // create ES client
-    let credentials = Credentials::Basic(username, password);
-    let u = Url::parse(&url)?;
-    let conn_pool = SingleNodeConnectionPool::new(u);
-    let mut transport_builder = TransportBuilder::new(conn_pool);
-    transport_builder = transport_builder.auth(credentials);
-    let transport = transport_builder.build()?;
+    let search_store = ElasticsearchSearchStore::new(&url, &username, &password).await?;
 
-    let client = Elasticsearch::new(transport);
-
-    let index_fullname = format!("core.{}_{}", index_alias, index_version);
+    let index_fullname = format!("core.{}_{}", index_name, index_version);
+    let index_alias = format!("core.{}", index_name);
 
     // do not create index if it already exists
-    let response = client
+    let response = search_store
+        .client
         .indices()
         .exists(IndicesExistsParts::Index(&[index_fullname.as_str()]))
         .send()
@@ -87,13 +79,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // get index settings and mappings, parse them as json
     let settings_path = format!(
         "src/search_stores/indices/{}_{}.settings.{}.json",
-        index_alias,
+        index_name,
         index_version,
         region.to_string().to_lowercase()
     );
     let mappings_path = format!(
         "src/search_stores/indices/{}_{}.mappings.json",
-        index_alias, index_version
+        index_name, index_version
     );
 
     // catch errors, provide the error message
@@ -140,7 +132,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // create index with settings, mappings and alias
-    let response = client
+    let response = search_store
+        .client
         .indices()
         .create(IndicesCreateParts::Index(index_fullname.as_str()))
         .body(body)

@@ -33,7 +33,7 @@ const sizeVariants: Record<CardButtonSizeType, string> = {
 };
 
 const cardButtonVariants = cva(
-  "s-flex s-text-left s-group s-border s-overflow-hidden s-text-foreground",
+  "s-flex s-text-left  s-justify-center s-group s-border s-overflow-hidden s-text-foreground",
   {
     variants: {
       variant: variantClasses,

@@ -40,17 +40,17 @@ import {
 } from "@connectors/lib/api/data_source_config";
 import { concurrentExecutor } from "@connectors/lib/async_utils";
 import {
-  deleteFromDataSource,
-  deleteTable,
-  deleteTableRow,
+  deleteDataSourceDocument,
+  deleteDataSourceTable,
+  deleteDataSourceTableRow,
   MAX_DOCUMENT_TXT_LEN,
   MAX_PREFIX_CHARS,
   MAX_PREFIX_TOKENS,
   renderDocumentTitleAndContent,
   renderPrefixSection,
   sectionLength,
-  upsertTableFromCsv,
-  upsertToDatasource,
+  upsertDataSourceDocument,
+  upsertDataSourceTableFromCsv,
 } from "@connectors/lib/data_sources";
 import { TablesError } from "@connectors/lib/error";
 import {
@@ -705,7 +705,7 @@ export async function deletePage({
   logger: Logger;
 }) {
   logger.info("Deleting page.");
-  await deleteFromDataSource(dataSourceConfig, `notion-${pageId}`);
+  await deleteDataSourceDocument(dataSourceConfig, `notion-${pageId}`);
   const notionPage = await NotionPage.findOne({
     where: {
       connectorId,
@@ -722,7 +722,7 @@ export async function deletePage({
     if (parentDatabase) {
       const tableId = `notion-${parentDatabase.notionDatabaseId}`;
       const rowId = `notion-${notionPage.notionPageId}`;
-      await deleteTableRow({ dataSourceConfig, tableId, rowId });
+      await deleteDataSourceTableRow({ dataSourceConfig, tableId, rowId });
     }
   }
   await notionPage?.destroy();
@@ -740,7 +740,10 @@ export async function deleteDatabase({
   logger: Logger;
 }) {
   logger.info("Deleting database.");
-  await deleteFromDataSource(dataSourceConfig, `notion-database-${databaseId}`);
+  await deleteDataSourceDocument(
+    dataSourceConfig,
+    `notion-database-${databaseId}`
+  );
   const notionDatabase = await NotionDatabase.findOne({
     where: {
       connectorId,
@@ -749,7 +752,7 @@ export async function deleteDatabase({
   });
   if (notionDatabase) {
     const tableId = `notion-${notionDatabase.notionDatabaseId}`;
-    await deleteTable({ dataSourceConfig, tableId });
+    await deleteDataSourceTable({ dataSourceConfig, tableId });
   }
   await NotionDatabase.destroy({
     where: {
@@ -1354,6 +1357,7 @@ export async function cacheBlockChildren({
     },
   });
 
+  // The page might not exist yet as in the first run of the workflow as we cache block children THEN we store the page
   if (notionPageModel?.skipReason) {
     logger.info(
       { skipReason: notionPageModel.skipReason },
@@ -1790,7 +1794,7 @@ export async function renderAndUpsertPageFromCache({
           rowBoundary: "",
         });
 
-        const parents = await getParents(
+        const parentPageOrDbIds = await getParents(
           connector.id,
           parentDb.notionDatabaseId,
           [],
@@ -1800,9 +1804,13 @@ export async function renderAndUpsertPageFromCache({
           }
         );
 
+        // TODO(kw_search) remove legacy
+        const legacyParents = parentPageOrDbIds;
+        const parents = parentPageOrDbIds.map((id) => `notion-${id}`);
+
         await ignoreTablesError(
           () =>
-            upsertTableFromCsv({
+            upsertDataSourceTableFromCsv({
               dataSourceConfig: dataSourceConfigFromConnector(connector),
               tableId,
               tableName,
@@ -1811,7 +1819,7 @@ export async function renderAndUpsertPageFromCache({
               loggerArgs,
               // We only update the rowId of for the page without truncating the rest of the table (incremental sync).
               truncate: false,
-              parents,
+              parents: [...parents, ...legacyParents],
               title: parentDb.title ?? "Untitled Notion Database",
               mimeType: "application/vnd.dust.notion.database",
             }),
@@ -1990,7 +1998,8 @@ export async function renderAndUpsertPageFromCache({
     localLogger.info(
       "notionRenderAndUpsertPageFromCache: Fetching resource parents."
     );
-    const parents = await getParents(
+
+    const parentPageOrDbIds = await getParents(
       connectorId,
       pageId,
       [],
@@ -1999,6 +2008,10 @@ export async function renderAndUpsertPageFromCache({
         await heartbeat();
       }
     );
+
+    // TODO(kw_search) remove legacy
+    const legacyParentIds = parentPageOrDbIds;
+    const parentIds = parentPageOrDbIds.map((id) => `notion-${id}`);
 
     const content = await renderDocumentTitleAndContent({
       dataSourceConfig: dsConfig,
@@ -2013,7 +2026,7 @@ export async function renderAndUpsertPageFromCache({
     localLogger.info(
       "notionRenderAndUpsertPageFromCache: Upserting to Data Source."
     );
-    await upsertToDatasource({
+    await upsertDataSourceDocument({
       dataSourceConfig: dsConfig,
       documentId,
       documentContent: content,
@@ -2027,7 +2040,9 @@ export async function renderAndUpsertPageFromCache({
         updatedTime: updatedAt.getTime(),
         parsedProperties,
       }),
-      parents,
+      // TODO(kw_search) remove legacy
+      parents: [...parentIds, ...legacyParentIds],
+      parentId: parentIds.length > 1 ? parentIds[1] : null,
       loggerArgs,
       upsertContext: {
         sync_type: isFullSync ? "batch" : "incremental",
@@ -2505,7 +2520,7 @@ export async function upsertDatabaseStructuredDataFromCache({
 
   const upsertAt = new Date();
 
-  const parents = await getParents(
+  const parentPageOrDbIds = await getParents(
     connector.id,
     databaseId,
     [],
@@ -2513,10 +2528,14 @@ export async function upsertDatabaseStructuredDataFromCache({
     async () => heartbeat()
   );
 
+  // TODO(kw_search) remove legacy
+  const legacyParentIds = parentPageOrDbIds;
+  const parentIds = parentPageOrDbIds.map((id) => `notion-${id}`);
+
   localLogger.info("Upserting Notion Database as Table.");
   await ignoreTablesError(
     () =>
-      upsertTableFromCsv({
+      upsertDataSourceTableFromCsv({
         dataSourceConfig,
         tableId,
         tableName,
@@ -2525,7 +2544,8 @@ export async function upsertDatabaseStructuredDataFromCache({
         loggerArgs,
         // We overwrite the whole table since we just fetched all child pages.
         truncate: true,
-        parents,
+        // TODO(kw_search) remove legacy
+        parents: [...parentIds, ...legacyParentIds],
         title: dbModel.title ?? "Untitled Notion Database",
         mimeType: "application/vnd.dust.notion.database",
       }),
@@ -2552,6 +2572,7 @@ export async function upsertDatabaseStructuredDataFromCache({
       "Skipping document upsert as body is too long."
     );
   } else {
+    // We also include a text document (not table) with a CSV reprensentation of the database.
     localLogger.info("Upserting Notion Database as Document.");
     const prefix = `${databaseName}\n${csvHeader}\n`;
     const prefixSection = await renderPrefixSection({
@@ -2561,9 +2582,11 @@ export async function upsertDatabaseStructuredDataFromCache({
       maxPrefixChars: MAX_PREFIX_CHARS * 2,
     });
     if (!prefixSection.content) {
-      await upsertToDatasource({
+      // We use a special id for the document to avoid conflicts with the table.
+      const databaseDocId = `notion-database-${databaseId}`;
+      await upsertDataSourceDocument({
         dataSourceConfig,
-        documentId: `notion-database-${databaseId}`,
+        documentId: databaseDocId,
         documentContent: {
           prefix: prefixSection.prefix,
           content: csvRows,
@@ -2576,7 +2599,11 @@ export async function upsertDatabaseStructuredDataFromCache({
         // we currently don't have it because we don't fetch the DB object from notion.
         timestampMs: upsertAt.getTime(),
         tags: [`title:${databaseName}`, "is_database:true"],
-        parents: parents,
+        // TODO(kw_search) remove legacy
+        // The parents end up including the special ID for the document, the node ID of the database, and the parents of the database.
+        parents: [databaseDocId, ...parentIds, ...legacyParentIds],
+        // The direct parent ID is the node ID of the database.
+        parentId: `notion-${databaseId}`,
         loggerArgs,
         upsertContext: {
           sync_type: "batch",

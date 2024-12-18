@@ -17,7 +17,7 @@ import {
   makeConfluenceRemoveSpaceWorkflowIdFromParentId,
   makeConfluenceSpaceSyncWorkflowIdFromParentId,
   makeConfluenceSyncTopLevelChildPagesWorkflowIdFromParentId,
-} from "@connectors/connectors/confluence/temporal/utils";
+} from "@connectors/connectors/confluence/temporal/workflow_ids";
 
 const {
   confluenceGetSpaceNameActivity,
@@ -31,11 +31,13 @@ const {
   confluenceGetActiveChildPageRefsActivity,
   confluenceGetRootPageRefsActivity,
   fetchConfluenceSpaceIdsForConnectorActivity,
+  confluenceUpsertPageWithFullParentsActivity,
 
   confluenceGetReportPersonalActionActivity,
   fetchConfluenceUserAccountAndConnectorIdsActivity,
 
   fetchConfluenceConfigurationActivity,
+  confluenceUpsertSpaceFolderActivity,
   getSpaceIdsToSyncActivity,
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: "30 minutes",
@@ -148,6 +150,12 @@ export async function confluenceSpaceSyncWorkflow(
   if (spaceName === null) {
     return startConfluenceRemoveSpaceWorkflow(wInfo, connectorId, spaceId);
   }
+
+  await confluenceUpsertSpaceFolderActivity({
+    connectorId,
+    spaceId,
+    spaceName,
+  });
 
   // Get the root level pages for the space.
   const rootPageRefs = await confluenceGetRootPageRefsActivity({
@@ -410,5 +418,41 @@ export async function confluencePersonalDataReportingWorkflow() {
 
       // TODO(2024-01-23 flav) Implement logic to remove row in the Connector table and stop all workflows.
     }
+  }
+}
+
+export async function confluenceUpsertPageWithFullParentsWorkflow({
+  connectorId,
+  pageId,
+}: {
+  connectorId: ModelId;
+  pageId: string;
+}) {
+  await confluenceUpsertPageWithFullParentsActivity({
+    connectorId,
+    pageId,
+  });
+}
+
+export async function confluenceUpsertPagesWithFullParentsWorkflow({
+  connectorId,
+  pageIds,
+}: {
+  connectorId: ModelId;
+  pageIds: string[];
+}) {
+  const cachedSpaceNames: Record<string, string> = {};
+  const cachedSpaceHierarchies: Record<
+    string,
+    Record<string, string | null>
+  > = {};
+
+  for (const pageId of pageIds) {
+    await confluenceUpsertPageWithFullParentsActivity({
+      connectorId,
+      pageId,
+      cachedSpaceNames,
+      cachedSpaceHierarchies,
+    });
   }
 }

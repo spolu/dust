@@ -48,6 +48,9 @@ use dust::{
     providers::provider::{provider, ProviderID},
     run,
     search_filter::{Filterable, SearchFilter},
+    search_stores::search_store::{
+        DatasourceViewFilter, ElasticsearchSearchStore, NodesSearchOptions, SearchStore,
+    },
     sqlite_workers::client::{self, HEARTBEAT_INTERVAL_MS},
     stores::{
         postgres,
@@ -70,7 +73,7 @@ struct APIState {
     store: Box<dyn store::Store + Sync + Send>,
     databases_store: Box<dyn databases_store::DatabasesStore + Sync + Send>,
     qdrant_clients: QdrantClients,
-
+    search_store: Box<dyn SearchStore + Sync + Send>,
     run_manager: Arc<Mutex<RunManager>>,
 }
 
@@ -79,11 +82,13 @@ impl APIState {
         store: Box<dyn store::Store + Sync + Send>,
         databases_store: Box<dyn databases_store::DatabasesStore + Sync + Send>,
         qdrant_clients: QdrantClients,
+        search_store: Box<dyn SearchStore + Sync + Send>,
     ) -> Self {
         APIState {
             store,
             qdrant_clients,
             databases_store,
+            search_store,
             run_manager: Arc::new(Mutex::new(RunManager {
                 pending_apps: vec![],
                 pending_runs: vec![],
@@ -1468,6 +1473,7 @@ async fn data_sources_documents_update_tags(
 
 #[derive(serde::Deserialize)]
 struct DataSourcesDocumentsUpdateParentsPayload {
+    parent_id: Option<String>,
     parents: Vec<String>,
 }
 
@@ -1487,6 +1493,29 @@ async fn data_sources_documents_update_parents(
             operation = "update_parents",
             "[KWSEARCH] invariant_first_parent_self"
         );
+    }
+
+    match &payload.parent_id {
+        Some(parent_id) => {
+            if payload.parents.get(1) != Some(parent_id) {
+                return error_response(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_parent_id",
+                    "Failed to update document parents - parents[1] and parent_id should be equal",
+                    None,
+                );
+            }
+        }
+        None => {
+            info!(
+                data_source_id = data_source_id,
+                node_id = document_id,
+                parents = ?payload.parents,
+                node_type = "document",
+                operation = "update_parents",
+                "[KWSEARCH] invariant_parent_id_not_none"
+            );
+        }
     }
 
     match state
@@ -1585,6 +1614,7 @@ async fn data_sources_documents_versions_list(
                 None => None,
             },
             &query.latest_hash,
+            true,
         )
         .await
     {
@@ -1616,6 +1646,7 @@ struct DataSourcesDocumentsUpsertPayload {
     document_id: String,
     timestamp: Option<u64>,
     tags: Vec<String>,
+    parent_id: Option<String>,
     parents: Vec<String>,
     source_url: Option<String>,
     section: Section,
@@ -1645,6 +1676,30 @@ async fn data_sources_documents_upsert(
             operation = "upsert",
             "[KWSEARCH] invariant_first_parent_self"
         );
+    }
+
+    match &payload.parent_id {
+        Some(parent_id) => {
+            if payload.parents.get(1) != Some(parent_id) {
+                // TODO(fontanierh): Temporary, as we need to let some jobs go through.
+                // return error_response(
+                //     StatusCode::BAD_REQUEST,
+                //     "invalid_parent_id",
+                //     "Failed to upsert document - parents[1] and parent_id should be equal",
+                //     None,
+                // );
+            }
+        }
+        None => {
+            info!(
+                data_source_id = data_source_id,
+                node_id = payload.document_id,
+                parents = ?payload.parents,
+                node_type = "document",
+                operation = "upsert",
+                "[KWSEARCH] invariant_parent_id_not_none"
+            );
+        }
     }
 
     match state
@@ -1680,6 +1735,7 @@ async fn data_sources_documents_upsert(
                         &payload.source_url,
                         payload.section,
                         true, // preserve system tags
+                        state.search_store.clone(),
                     )
                     .await
                 {
@@ -1787,6 +1843,7 @@ async fn data_sources_documents_list(
             &document_ids,
             limit_offset,
             true, // remove system tags
+            true,
         )
         .await
     {
@@ -2072,6 +2129,7 @@ struct DatabasesTablesUpsertPayload {
     description: String,
     timestamp: Option<u64>,
     tags: Vec<String>,
+    parent_id: Option<String>,
     parents: Vec<String>,
 
     // Remote DB specifics
@@ -2101,6 +2159,29 @@ async fn tables_upsert(
         );
     }
 
+    match &payload.parent_id {
+        Some(parent_id) => {
+            if payload.parents.get(1) != Some(parent_id) {
+                return error_response(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_parent_id",
+                    "Failed to upsert table - parents[1] and parent_id should be equal",
+                    None,
+                );
+            }
+        }
+        None => {
+            info!(
+                data_source_id = data_source_id,
+                node_id = payload.table_id,
+                parents = ?payload.parents,
+                node_type = "table",
+                operation = "upsert",
+                "[KWSEARCH] invariant_parent_id_not_none"
+            );
+        }
+    }
+
     match state
         .store
         .upsert_data_source_table(
@@ -2121,21 +2202,27 @@ async fn tables_upsert(
         )
         .await
     {
-        Ok(table) => (
-            StatusCode::OK,
-            Json(APIResponse {
-                error: None,
-                response: Some(json!({ "table": table })),
-            }),
-        ),
-        Err(e) => {
-            return error_response(
+        Ok(table) => match state.search_store.index_table(table.clone()).await {
+            Ok(_) => (
+                StatusCode::OK,
+                Json(APIResponse {
+                    error: None,
+                    response: Some(json!({ "table": table })),
+                }),
+            ),
+            Err(e) => error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal_server_error",
-                "Failed to upsert table",
+                "Failed to index table",
                 Some(e),
-            )
-        }
+            ),
+        },
+        Err(e) => error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal_server_error",
+            "Failed to upsert table",
+            Some(e),
+        ),
     }
 }
 
@@ -2300,11 +2387,14 @@ async fn tables_delete(
             "Failed to load table",
             Some(e),
         ),
-        Ok(None) => error_response(
-            StatusCode::NOT_FOUND,
-            "table_not_found",
-            &format!("No table found for id `{}`", table_id),
-            None,
+        Ok(None) => (
+            StatusCode::OK,
+            Json(APIResponse {
+                error: None,
+                response: Some(json!({
+                    "success": true,
+                })),
+            }),
         ),
         Ok(Some(table)) => {
             match table
@@ -2347,6 +2437,29 @@ async fn tables_update_parents(
             operation = "update_parents",
             "[KWSEARCH] invariant_first_parent_self"
         );
+    }
+
+    match &payload.parent_id {
+        Some(parent_id) => {
+            if payload.parents.get(1) != Some(parent_id) {
+                return error_response(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_parent_id",
+                    "Failed to update table parents - parents[1] and parent_id should be equal",
+                    None,
+                );
+            }
+        }
+        None => {
+            info!(
+                data_source_id = data_source_id,
+                node_id = table_id,
+                parents = ?payload.parents,
+                node_type = "table",
+                operation = "update_parents",
+                "[KWSEARCH] invariant_parent_id_not_none"
+            );
+        }
     }
 
     match state
@@ -2723,6 +2836,7 @@ async fn tables_rows_list(
 struct FoldersUpsertPayload {
     folder_id: String,
     timestamp: Option<u64>,
+    parent_id: Option<String>,
     parents: Vec<String>,
     title: String,
 }
@@ -2745,6 +2859,29 @@ async fn folders_upsert(
         );
     }
 
+    match &payload.parent_id {
+        Some(parent_id) => {
+            if payload.parents.get(1) != Some(parent_id) {
+                return error_response(
+                    StatusCode::BAD_REQUEST,
+                    "invalid_parent_id",
+                    "Failed to upsert folder - parents[1] and parent_id should be equal",
+                    None,
+                );
+            }
+        }
+        None => {
+            info!(
+                data_source_id = data_source_id,
+                node_id = payload.folder_id,
+                parents = ?payload.parents,
+                node_type = "folder",
+                operation = "upsert",
+                "[KWSEARCH] invariant_parent_id_not_none"
+            );
+        }
+    }
+
     match state
         .store
         .upsert_data_source_folder(
@@ -2759,23 +2896,29 @@ async fn folders_upsert(
         )
         .await
     {
-        Err(e) => {
-            return error_response(
+        Err(e) => error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal_server_error",
+            "Failed to upsert folder",
+            Some(e),
+        ),
+        Ok(folder) => match state.search_store.index_folder(folder.clone()).await {
+            Ok(_) => (
+                StatusCode::OK,
+                Json(APIResponse {
+                    error: None,
+                    response: Some(json!({
+                        "folder": folder
+                    })),
+                }),
+            ),
+            Err(e) => error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal_server_error",
-                "Failed to upsert folder",
+                "Failed to index folder",
                 Some(e),
-            )
-        }
-        Ok(folder) => (
-            StatusCode::OK,
-            Json(APIResponse {
-                error: None,
-                response: Some(json!({
-                    "folder": folder
-                })),
-            }),
-        ),
+            ),
+        },
     }
 }
 
@@ -2908,11 +3051,14 @@ async fn folders_delete(
             "Failed to load folder",
             Some(e),
         ),
-        Ok(None) => error_response(
-            StatusCode::NOT_FOUND,
-            "folder_not_found",
-            &format!("No folder found for id `{}`", folder_id),
-            None,
+        Ok(None) => (
+            StatusCode::OK,
+            Json(APIResponse {
+                error: None,
+                response: Some(json!({
+                    "success": true,
+                })),
+            }),
         ),
         Ok(Some(_)) => {
             match state
@@ -2940,6 +3086,45 @@ async fn folders_delete(
             }
         }
     }
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct NodesSearchPayload {
+    query: String,
+    filter: Vec<DatasourceViewFilter>,
+    options: Option<NodesSearchOptions>,
+}
+
+async fn nodes_search(
+    State(state): State<Arc<APIState>>,
+    Json(payload): Json<NodesSearchPayload>,
+) -> (StatusCode, Json<APIResponse>) {
+    let nodes = match state
+        .search_store
+        .search_nodes(payload.query, payload.filter, payload.options)
+        .await
+    {
+        Ok(nodes) => nodes,
+        Err(e) => {
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal_server_error",
+                "Failed to search nodes",
+                Some(e),
+            );
+        }
+    };
+
+    (
+        StatusCode::OK,
+        Json(APIResponse {
+            error: None,
+            response: Some(json!({
+                "nodes": nodes,
+            })),
+        }),
+    )
 }
 
 #[derive(serde::Deserialize)]
@@ -3245,10 +3430,19 @@ fn main() {
                 Err(_) => Err(anyhow!("DATABASES_STORE_DATABASE_URI not set."))?,
             };
 
+        let url = std::env::var("ELASTICSEARCH_URL").expect("ELASTICSEARCH_URL must be set");
+        let username =
+            std::env::var("ELASTICSEARCH_USERNAME").expect("ELASTICSEARCH_USERNAME must be set");
+        let password =
+            std::env::var("ELASTICSEARCH_PASSWORD").expect("ELASTICSEARCH_PASSWORD must be set");
+
+        let search_store : Box<dyn SearchStore + Sync + Send> = Box::new(ElasticsearchSearchStore::new(&url, &username, &password).await?);
+
         let state = Arc::new(APIState::new(
             store,
             databases_store,
             QdrantClients::build().await?,
+            search_store,
         ));
 
         let router = Router::new()
@@ -3392,6 +3586,7 @@ fn main() {
             post(databases_query_run),
         )
         .route("/sqlite_workers", delete(sqlite_workers_delete))
+
         // Folders
         .route(
             "/projects/:project_id/data_sources/:data_source_id/folders",
@@ -3409,6 +3604,9 @@ fn main() {
             "/projects/:project_id/data_sources/:data_source_id/folders/:folder_id",
             delete(folders_delete),
         )
+
+        //Search
+        .route("/nodes/search", post(nodes_search))
 
         // Misc
         .route("/tokenize", post(tokenize))

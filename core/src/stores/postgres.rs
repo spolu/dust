@@ -1400,6 +1400,7 @@ impl Store for PostgresStore {
                 document_id,
                 tags,
                 mime_type: node_mime_type.unwrap_or("application/octet-stream".to_string()),
+                parent_id: parents.get(1).cloned(),
                 parents,
                 source_url,
                 hash,
@@ -1573,6 +1574,7 @@ impl Store for PostgresStore {
         limit_offset: Option<(usize, usize)>,
         view_filter: &Option<SearchFilter>,
         latest_hash: &Option<String>,
+        include_count: bool,
     ) -> Result<(Vec<DocumentVersion>, usize)> {
         let project_id = project.project_id();
         let data_source_id = data_source_id.to_string();
@@ -1697,23 +1699,27 @@ impl Store for PostgresStore {
             });
         }
 
-        let total = match limit_offset {
-            None => versions.len(),
-            Some(_) => {
-                let stmt = c
-                    .prepare(
-                        format!(
-                            "SELECT COUNT(*) FROM data_sources_documents dsd \
-                               INNER JOIN data_sources_nodes dsn ON dsn.document=dsd.id \
-                               WHERE {}",
-                            where_clauses.join(" AND ")
+        let total = if include_count {
+            match limit_offset {
+                None => versions.len(),
+                Some(_) => {
+                    let stmt = c
+                        .prepare(
+                            format!(
+                                "SELECT COUNT(*) FROM data_sources_documents dsd \
+                                INNER JOIN data_sources_nodes dsn ON dsn.document=dsd.id \
+                                WHERE {}",
+                                where_clauses.join(" AND ")
+                            )
+                            .as_str(),
                         )
-                        .as_str(),
-                    )
-                    .await?;
-                let t: i64 = c.query_one(&stmt, &params).await?.get(0);
-                t as usize
+                        .await?;
+                    let t: i64 = c.query_one(&stmt, &params).await?.get(0);
+                    t as usize
+                }
             }
+        } else {
+            0
         };
 
         Ok((versions, total))
@@ -1726,6 +1732,7 @@ impl Store for PostgresStore {
         filter: &Option<SearchFilter>,
         view_filter: &Option<SearchFilter>,
         limit_offset: Option<(usize, usize)>,
+        include_count: bool,
     ) -> Result<(Vec<String>, usize)> {
         let pool = self.pool.clone();
         let c = pool.get().await?;
@@ -1772,14 +1779,19 @@ impl Store for PostgresStore {
         params.extend(view_filter_params);
 
         // compute the total count
-        let count_query = format!(
-            "SELECT COUNT(*) \
-               FROM data_sources_documents dsd \
-               INNER JOIN data_sources_nodes dsn ON dsn.document=dsd.id \
-               WHERE {}",
-            where_clauses.join(" AND ")
-        );
-        let count: i64 = c.query_one(&count_query, &params).await?.get(0);
+        let count = if include_count {
+            let count_query = format!(
+                "SELECT COUNT(*) \
+                   FROM data_sources_documents dsd \
+                   INNER JOIN data_sources_nodes dsn ON dsn.document=dsd.id \
+                   WHERE {}",
+                where_clauses.join(" AND ")
+            );
+            let count: i64 = c.query_one(&count_query, &params).await?.get(0);
+            count as usize
+        } else {
+            0
+        };
 
         let mut query = format!(
             "SELECT document_id FROM data_sources_documents dsd \
@@ -1885,6 +1897,7 @@ impl Store for PostgresStore {
             document_id: create_params.document_id,
             timestamp: create_params.timestamp,
             tags: create_params.tags,
+            parent_id: create_params.parents.get(1).cloned(),
             parents: create_params.parents,
             source_url: create_params.source_url,
             hash: create_params.hash,
@@ -1923,6 +1936,7 @@ impl Store for PostgresStore {
         document_ids: &Option<Vec<String>>,
         limit_offset: Option<(usize, usize)>,
         remove_system_tags: bool,
+        include_count: bool,
     ) -> Result<(Vec<Document>, usize)> {
         let project_id = project.project_id();
         let data_source_id = data_source_id.to_string();
@@ -2041,6 +2055,7 @@ impl Store for PostgresStore {
                     mime_type: node_mime_type.unwrap_or("application/octet-stream".to_string()),
                     document_id,
                     tags,
+                    parent_id: parents.get(1).cloned(),
                     parents,
                     source_url,
                     hash,
@@ -2053,23 +2068,27 @@ impl Store for PostgresStore {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let total = match limit_offset {
-            None => documents.len(),
-            Some(_) => {
-                let stmt = c
-                    .prepare(
-                        format!(
-                            "SELECT COUNT(*) FROM data_sources_documents dsd \
-                               INNER JOIN data_sources_nodes dsn ON dsn.document=dsd.id \
-                               WHERE {}",
-                            where_clauses.join(" AND ")
+        let total: usize = if include_count {
+            match limit_offset {
+                None => documents.len(),
+                Some(_) => {
+                    let stmt = c
+                        .prepare(
+                            format!(
+                                "SELECT COUNT(*) FROM data_sources_documents dsd \
+                                    INNER JOIN data_sources_nodes dsn ON dsn.document=dsd.id \
+                                    WHERE {}",
+                                where_clauses.join(" AND ")
+                            )
+                            .as_str(),
                         )
-                        .as_str(),
-                    )
-                    .await?;
-                let t: i64 = c.query_one(&stmt, &params).await?.get(0);
-                t as usize
+                        .await?;
+                    let t: i64 = c.query_one(&stmt, &params).await?.get(0);
+                    t as usize
+                }
             }
+        } else {
+            0
         };
 
         Ok((documents, total))
@@ -2654,6 +2673,7 @@ impl Store for PostgresStore {
             title,
             upsert_params.mime_type.unwrap_or("text/csv".to_string()),
             upsert_params.tags,
+            upsert_params.parents.get(1).cloned(),
             upsert_params.parents,
             parsed_schema,
             table_schema_stale_at.map(|t| t as u64),
@@ -2927,6 +2947,7 @@ impl Store for PostgresStore {
                     title,
                     "text/csv".to_string(), // TODO(KW_SEARCH_INFRA) use mimetype
                     tags,
+                    parents.get(1).cloned(),
                     parents,
                     parsed_schema,
                     schema_stale_at.map(|t| t as u64),
@@ -3068,6 +3089,7 @@ impl Store for PostgresStore {
                     title,
                     "text/csv".to_string(), // TODO(KW_SEARCH_INFRA)use mimetype
                     tags,
+                    parents.get(1).cloned(),
                     parents,
                     parsed_schema,
                     schema_stale_at.map(|t| t as u64),
@@ -3200,6 +3222,7 @@ impl Store for PostgresStore {
             upsert_params.folder_id,
             created as u64,
             upsert_params.title,
+            upsert_params.parents.get(1).cloned(),
             upsert_params.parents,
         );
 
@@ -3374,6 +3397,7 @@ impl Store for PostgresStore {
                     node_id,
                     timestamp as u64,
                     title,
+                    parents.get(1).cloned(),
                     parents,
                 ))
             })
@@ -3479,6 +3503,7 @@ impl Store for PostgresStore {
                         timestamp as u64,
                         &title,
                         &mime_type,
+                        parents.get(1).cloned(),
                         parents,
                     ),
                     row_id,

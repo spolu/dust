@@ -166,7 +166,11 @@ async function handler(
   }
 
   const dataSourceView = await DataSourceViewResource.fetchById(auth, dsvId);
-  if (!dataSourceView || dataSourceView.space.sId !== space.sId) {
+  if (
+    !dataSourceView ||
+    dataSourceView.space.sId !== space.sId ||
+    !dataSourceView.canRead(auth)
+  ) {
     return apiError(req, res, {
       status_code: 404,
       api_error: {
@@ -185,6 +189,12 @@ async function handler(
       if (req.query.tags_not && typeof req.query.tags_not === "string") {
         req.query.tags_not = [req.query.tags_not];
       }
+      if (req.query.parents_in && typeof req.query.parents_in === "string") {
+        req.query.parents_in = [req.query.parents_in];
+      }
+      if (req.query.parents_not && typeof req.query.parents_not === "string") {
+        req.query.parents_not = [req.query.parents_not];
+      }
 
       const r = DataSourceSearchQuerySchema.safeParse(req.query);
 
@@ -201,6 +211,7 @@ async function handler(
       const s = await handleDataSourceSearch({
         searchQuery,
         dataSource: dataSourceView.dataSource,
+        dataSourceView,
       });
       if (s.isErr()) {
         switch (s.error.code) {

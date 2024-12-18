@@ -1,4 +1,5 @@
 import { ArrowRightIcon, Button, RocketIcon } from "@dust-tt/sparkle";
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import React from "react";
@@ -17,6 +18,7 @@ import {
   H3,
   H5,
   P,
+  Strong,
 } from "@app/components/home/ContentComponents";
 import type { SolutionSectionAssistantBlockProps } from "@app/components/home/SolutionSection";
 import { SolutionSectionAssistantBlock } from "@app/components/home/SolutionSection";
@@ -52,7 +54,7 @@ export const ImgBlock: React.FC<ImgBlockProps> = ({
       <div className="ml-[10%] pr-[20%] md:m-0 md:pr-[28%]">
         {children ? children : null}
       </div>
-      <div className="flex flex-col gap-2 lg:gap-4">
+      <div className="flex flex-col px-0 py-6">
         <H3 className="text-white">{title}</H3>
         {renderContent()}
       </div>
@@ -81,13 +83,13 @@ export const BlogBlock: React.FC<BlogBlockProps> = ({
       target="_blank"
       className={classNames(
         className,
-        "flex flex-col overflow-hidden rounded-2xl bg-slate-200 drop-shadow-xl",
+        "flex w-full flex-col overflow-hidden rounded-2xl bg-slate-200 drop-shadow-xl",
         "group transition duration-300 ease-out",
-        "scale-100 hover:scale-100 hover:bg-white"
+        "hover:bg-white"
       )}
     >
       {children ? (
-        <div className="relative aspect-video overflow-hidden rounded-t-xl">
+        <div className="relative aspect-[16/9] w-full overflow-hidden rounded-t-xl">
           {React.Children.map(children, (child) => {
             if (
               React.isValidElement<React.ImgHTMLAttributes<HTMLImageElement>>(
@@ -96,19 +98,25 @@ export const BlogBlock: React.FC<BlogBlockProps> = ({
               child.type === "img"
             ) {
               return React.cloneElement(child, {
-                className:
-                  "absolute h-full w-full object-cover brightness-100 transition duration-300 ease-out group-hover:brightness-110 border border-slate-900/10 rounded-t-2xl",
+                className: classNames(
+                  "absolute h-full w-full object-cover",
+                  "brightness-100 transition duration-300 ease-out",
+                  "group-hover:brightness-110",
+                  "border border-slate-900/10 rounded-t-2xl"
+                ),
               });
             }
             return child;
           })}
         </div>
       ) : null}
-      <div className="flex flex-col gap-3 p-6">
-        <H5 className="text-slate-900">{title}</H5>
-        <P size="xs" className="text-slate-900">
-          {content}
-        </P>
+      <div className="flex flex-col p-6">
+        <div className="flex flex-col gap-2">
+          <H5 className="line-clamp-2 text-slate-900">{title}</H5>
+          <P size="xs" className="line-clamp-3 text-slate-900">
+            {content}
+          </P>
+        </div>
       </div>
     </a>
   );
@@ -171,6 +179,64 @@ export const HeaderContentBlock = ({
   </Grid>
 );
 
+interface MetricComponentProps {
+  metrics: {
+    value: string;
+    description: ReactNode;
+  }[];
+  from: string;
+  to: string;
+}
+
+export const MetricComponent = ({
+  metrics,
+  from,
+  to,
+}: MetricComponentProps) => (
+  <>
+    {metrics.map((metric, index) => (
+      <div
+        key={index}
+        className="col-span-6 flex flex-col items-center gap-4 py-12 text-center"
+      >
+        <H1 from={from} to={to}>
+          {metric.value}
+        </H1>
+        <P size="lg" className="max-w-[400px] text-white">
+          {metric.description}
+        </P>
+      </div>
+    ))}
+  </>
+);
+
+interface QuoteProps {
+  quote: string;
+  name: string;
+  title: string;
+  logo: string;
+}
+
+export const Quote = ({ quote, logo, name, title }: QuoteProps) => (
+  <div className="col-span-12 flex flex-col py-20 md:col-span-10 md:col-start-2 lg:col-span-8 lg:col-start-3">
+    <div className="flex flex-col items-center text-center font-objektiv text-xl italic text-white sm:text-2xl lg:text-3xl">
+      &ldquo; {quote} &rdquo;
+    </div>
+    <div className="flex justify-center pt-8">
+      <div className="flex items-center justify-center">
+        <Image src={logo} width={200} height={48} alt="Malt Logo" />
+        <P size="md" className="text-primary-400">
+          <Strong>
+            <span className="text-pink-300">{name}</span>
+          </Strong>
+          <br />
+          {title}
+        </P>
+      </div>
+    </div>
+  </div>
+);
+
 interface CarousselContentBlockProps {
   title: ReactNode;
   subtitle?: ReactNode;
@@ -208,11 +274,11 @@ export const CarousselContentBlock = ({
           {description}
         </P>
       </div>
-      <div className="w-full text-center">
-        <Link href={href} shallow={true} className="block w-full">
+      <div className="w-full text-left">
+        <Link href={href} shallow={true} className="inline-block">
           <Button
             label={"Discover Dust for " + title}
-            variant="ghost"
+            variant="outline"
             size="md"
             icon={ArrowRightIcon}
             className="max-w-full"

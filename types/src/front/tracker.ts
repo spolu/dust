@@ -1,5 +1,5 @@
 import { ModelId } from "../shared/model_id";
-import { ioTsEnum } from "../shared/utils/iots_utils";
+import { DataSourceViewSelectionConfigurations } from "./data_source_view";
 import { ModelIdType, ModelProviderIdType } from "./lib/assistant";
 import { SpaceType } from "./space";
 
@@ -13,9 +13,22 @@ export type TrackerConfigurationType = {
   providerId: ModelProviderIdType;
   temperature: number;
   prompt: string | null;
-  frequency: string | null;
+  frequency: string;
   recipients: string[];
   space: SpaceType;
+  maintainedDataSources: TrackerDataSourceConfigurationType[];
+  watchedDataSources: TrackerDataSourceConfigurationType[];
+  generations?: TrackerGenerationToProcess[];
+};
+
+export type TrackerDataSourceConfigurationType = {
+  dataSourceViewId: string;
+  filter: {
+    parents: {
+      in: string[];
+      not: string[];
+    } | null;
+  };
 };
 
 export type TrackerConfigurationStateType = {
@@ -32,15 +45,24 @@ export type TrackerConfigurationStateType = {
   modelId: ModelIdType;
   providerId: ModelProviderIdType;
   temperature: number;
+  maintainedDataSources: DataSourceViewSelectionConfigurations;
+  watchedDataSources: DataSourceViewSelectionConfigurations;
 };
 
-export const TRACKER_FREQUENCY_TYPES: TrackerFrequencyType[] = [
-  "daily",
-  "weekly",
-  "monthly",
+export const TRACKER_FREQUENCIES = [
+  { label: "Daily", value: "0 17 * * 1-5" },
+  { label: "Weekly", value: "0 17 * * 5" },
 ];
-export type TrackerFrequencyType = "daily" | "weekly" | "monthly";
 
-export const FrequencyCodec = ioTsEnum<
-  (typeof TRACKER_FREQUENCY_TYPES)[number]
->(TRACKER_FREQUENCY_TYPES);
+export type TrackerIdWorkspaceId = {
+  trackerId: number;
+  workspaceId: string;
+};
+
+export type TrackerGenerationToProcess = {
+  id: ModelId;
+  content: string;
+  thinking: string | null;
+  documentId: string;
+  // TODO: Add info about the document.
+};

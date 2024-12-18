@@ -48,6 +48,8 @@ export type CoreAPIDocument = {
   data_source_id: string;
   created: number;
   document_id: string;
+  parents: string[];
+  parent_id: string | null;
   timestamp: number;
   tags: string[];
   source_url?: string | null;
@@ -79,6 +81,7 @@ export type CoreAPIFolder = {
   folder_id: string;
   timestamp: number;
   title: string;
+  parent_id: string | null;
   parents: string[];
 };
 

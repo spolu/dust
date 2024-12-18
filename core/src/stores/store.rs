@@ -182,6 +182,7 @@ pub trait Store {
         filter: &Option<SearchFilter>,
         view_filter: &Option<SearchFilter>,
         limit_offset: Option<(usize, usize)>,
+        include_count: bool,
     ) -> Result<(Vec<String>, usize)>;
     async fn create_data_source_document(
         &self,
@@ -219,6 +220,7 @@ pub trait Store {
         limit_offset: Option<(usize, usize)>,
         view_filter: &Option<SearchFilter>,
         latest_hash: &Option<String>,
+        include_count: bool,
     ) -> Result<(Vec<DocumentVersion>, usize)>;
     async fn list_data_source_documents(
         &self,
@@ -228,6 +230,7 @@ pub trait Store {
         document_ids: &Option<Vec<String>>,
         limit_offset: Option<(usize, usize)>,
         remove_system_tags: bool,
+        include_count: bool,
     ) -> Result<(Vec<Document>, usize)>;
     async fn delete_data_source_document(
         &self,
@@ -602,7 +605,7 @@ pub const POSTGRES_TABLES: [&'static str; 16] = [
     );",
 ];
 
-pub const SQL_INDEXES: [&'static str; 33] = [
+pub const SQL_INDEXES: [&'static str; 35] = [
     "CREATE INDEX IF NOT EXISTS
        idx_specifications_project_created ON specifications (project, created);",
     "CREATE INDEX IF NOT EXISTS
@@ -675,6 +678,10 @@ pub const SQL_INDEXES: [&'static str; 33] = [
         idx_data_sources_nodes_table ON data_sources_nodes(\"table\");",
     "CREATE INDEX IF NOT EXISTS
         idx_data_sources_nodes_folder ON data_sources_nodes(folder);",
+    "CREATE INDEX IF NOT EXISTS
+        idx_data_sources_nodes_parents_second ON data_sources_nodes (data_source, (parents[2]));",
+    "CREATE INDEX IF NOT EXISTS
+        idx_data_sources_nodes_parents_single ON data_sources_nodes (data_source, (array_length(parents, 1) = 1));",
 ];
 
 pub const SQL_FUNCTIONS: [&'static str; 2] = [

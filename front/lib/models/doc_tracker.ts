@@ -26,6 +26,7 @@ export class TrackerConfigurationModel extends SoftDeletableModel<TrackerConfigu
   declare prompt: string | null;
 
   declare frequency: string | null;
+  declare lastNotifiedAt: Date | null;
 
   declare recipients: string[] | null;
 
@@ -36,6 +37,10 @@ export class TrackerConfigurationModel extends SoftDeletableModel<TrackerConfigu
   declare workspace: NonAttribute<Workspace>;
   declare space: NonAttribute<SpaceModel>;
   declare user: NonAttribute<UserModel> | null;
+  declare dataSourceConfigurations: NonAttribute<
+    TrackerDataSourceConfigurationModel[]
+  >;
+  declare generations: NonAttribute<TrackerGenerationModel[]>;
 }
 
 TrackerConfigurationModel.init(
@@ -87,6 +92,10 @@ TrackerConfigurationModel.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    lastNotifiedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     recipients: {
       type: DataTypes.ARRAY(DataTypes.STRING),
       allowNull: true,
@@ -126,7 +135,7 @@ TrackerConfigurationModel.belongsTo(UserModel, {
   foreignKey: { allowNull: true },
 });
 
-export class TrackerDataSouceConfigurationModel extends SoftDeletableModel<TrackerDataSouceConfigurationModel> {
+export class TrackerDataSourceConfigurationModel extends SoftDeletableModel<TrackerDataSourceConfigurationModel> {
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 
@@ -144,7 +153,7 @@ export class TrackerDataSouceConfigurationModel extends SoftDeletableModel<Track
   declare dataSourceView: NonAttribute<DataSourceViewModel>;
 }
 
-TrackerDataSouceConfigurationModel.init(
+TrackerDataSourceConfigurationModel.init(
   {
     createdAt: {
       type: DataTypes.DATE,
@@ -175,31 +184,39 @@ TrackerDataSouceConfigurationModel.init(
   {
     modelName: "tracker_data_source_configuration",
     sequelize: frontSequelize,
-    indexes: [{ fields: ["trackerConfigurationId"] }],
+    indexes: [
+      { fields: ["trackerConfigurationId"] },
+      {
+        fields: ["parentsIn"],
+        using: "gin",
+        name: "tracker_data_source_configuration_parent_ids_gin_idx",
+      },
+    ],
   }
 );
 
-TrackerConfigurationModel.hasMany(TrackerDataSouceConfigurationModel, {
+TrackerConfigurationModel.hasMany(TrackerDataSourceConfigurationModel, {
   foreignKey: { allowNull: false },
   onDelete: "RESTRICT",
+  as: "dataSourceConfigurations",
 });
-TrackerDataSouceConfigurationModel.belongsTo(TrackerConfigurationModel, {
+TrackerDataSourceConfigurationModel.belongsTo(TrackerConfigurationModel, {
   foreignKey: { allowNull: false },
 });
 
-DataSourceModel.hasMany(TrackerDataSouceConfigurationModel, {
+DataSourceModel.hasMany(TrackerDataSourceConfigurationModel, {
   foreignKey: { allowNull: false },
   onDelete: "RESTRICT",
 });
-TrackerDataSouceConfigurationModel.belongsTo(DataSourceModel, {
+TrackerDataSourceConfigurationModel.belongsTo(DataSourceModel, {
   foreignKey: { allowNull: false },
 });
 
-DataSourceViewModel.hasMany(TrackerDataSouceConfigurationModel, {
+DataSourceViewModel.hasMany(TrackerDataSourceConfigurationModel, {
   foreignKey: { allowNull: false },
   onDelete: "RESTRICT",
 });
-TrackerDataSouceConfigurationModel.belongsTo(DataSourceViewModel, {
+TrackerDataSourceConfigurationModel.belongsTo(DataSourceViewModel, {
   foreignKey: { allowNull: false },
 });
 
@@ -213,6 +230,8 @@ export class TrackerGenerationModel extends SoftDeletableModel<TrackerGeneration
   declare trackerConfigurationId: ForeignKey<TrackerConfigurationModel["id"]>;
   declare dataSourceId: ForeignKey<DataSourceModel["id"]>;
   declare documentId: string;
+
+  declare consumedAt: Date | null;
 
   declare trackerConfiguration: NonAttribute<TrackerConfigurationModel>;
 }
@@ -244,6 +263,10 @@ TrackerGenerationModel.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    consumedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     modelName: "tracker_generation",
@@ -254,6 +277,7 @@ TrackerGenerationModel.init(
 
 TrackerConfigurationModel.hasMany(TrackerGenerationModel, {
   foreignKey: { allowNull: false },
+  as: "generations",
   onDelete: "RESTRICT",
 });
 TrackerGenerationModel.belongsTo(TrackerConfigurationModel, {

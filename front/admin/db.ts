@@ -50,7 +50,7 @@ import {
   DocumentTrackerChangeSuggestion,
   TrackedDocument,
   TrackerConfigurationModel,
-  TrackerDataSouceConfigurationModel,
+  TrackerDataSourceConfigurationModel,
   TrackerGenerationModel,
 } from "@app/lib/models/doc_tracker";
 import { FeatureFlag } from "@app/lib/models/feature_flag";
@@ -75,6 +75,7 @@ import { GroupMembershipModel } from "@app/lib/resources/storage/models/group_me
 import { GroupSpaceModel } from "@app/lib/resources/storage/models/group_spaces";
 import { GroupModel } from "@app/lib/resources/storage/models/groups";
 import { KeyModel } from "@app/lib/resources/storage/models/keys";
+import { KillSwitchModel } from "@app/lib/resources/storage/models/kill_switches";
 // Labs - Can be removed at all times if a solution is dropped
 import {
   LabsTranscriptsConfigurationModel,
@@ -129,7 +130,7 @@ async function main() {
   await DocumentTrackerChangeSuggestion.sync({ alter: true });
 
   await TrackerConfigurationModel.sync({ alter: true });
-  await TrackerDataSouceConfigurationModel.sync({ alter: true });
+  await TrackerDataSourceConfigurationModel.sync({ alter: true });
   await TrackerGenerationModel.sync({ alter: true });
 
   await Plan.sync({ alter: true });
@@ -171,6 +172,7 @@ async function main() {
   await RetrievalDocumentChunk.sync({ alter: true });
 
   await FeatureFlag.sync({ alter: true });
+  await KillSwitchModel.sync({ alter: true });
 
   await ConversationClassification.sync({ alter: true });
 

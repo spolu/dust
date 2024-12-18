@@ -9,6 +9,10 @@ pub mod stores {
     pub mod postgres;
     pub mod store;
 }
+pub mod search_stores {
+    pub mod search_store;
+}
+
 pub mod app;
 pub mod dataset;
 pub mod data_sources {
@@ -51,6 +55,7 @@ pub mod providers {
     }
     pub mod anthropic;
     pub mod google_ai_studio;
+    pub mod togetherai;
 }
 pub mod http {
     pub mod request;
