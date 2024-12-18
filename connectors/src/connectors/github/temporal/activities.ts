@@ -996,9 +996,9 @@ export async function githubCodeSyncActivity({
 
   await upsertDataSourceFolder({
     dataSourceConfig,
-    folderId: githubCodeRepository.repoId,
+    folderId: getRepositoryInternalId(githubCodeRepository.repoId),
     title: githubCodeRepository.repoName,
-    parents: [githubCodeRepository.repoId],
+    parents: [getRepositoryInternalId(githubCodeRepository.repoId)],
   });
 
   logger.info(
