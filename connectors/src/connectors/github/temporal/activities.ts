@@ -35,14 +35,12 @@ import { newWebhookSignal } from "@connectors/connectors/github/temporal/signals
 import { getCodeSyncWorkflowId } from "@connectors/connectors/github/temporal/utils";
 import { dataSourceConfigFromConnector } from "@connectors/lib/api/data_source_config";
 import {
-  deleteFolderNode,
-  deleteFromDataSource,
   deleteDataSourceDocument,
+  deleteDataSourceFolder,
   renderDocumentTitleAndContent,
   renderMarkdownSection,
   upsertDataSourceDocument,
-  upsertFolderNode,
-  upsertToDatasource,
+  upsertDataSourceFolder,
 } from "@connectors/lib/data_sources";
 import { ExternalOAuthTokenError } from "@connectors/lib/error";
 import {
@@ -318,7 +316,7 @@ export async function githubUpsertIssueActivity(
     connectorId: connector.id,
   });
 
-  await upsertFolderNode({
+  await upsertDataSourceFolder({
     dataSourceConfig,
     folderId: getIssuesInternalId(repoId),
     title: "Issues",
@@ -509,11 +507,14 @@ export async function githubUpsertDiscussionActivity(
     connectorId: connector.id,
   });
 
-  await upsertFolderNode({
+  await upsertDataSourceFolder({
     dataSourceConfig,
     folderId: getDiscussionsInternalId(repoId),
     title: "Discussions",
-    parents: [getDiscussionsInternalId(repoId), getRepositoryInternalId(repoId)],
+    parents: [
+      getDiscussionsInternalId(repoId),
+      getRepositoryInternalId(repoId),
+    ],
   });
 }
 
@@ -652,7 +653,7 @@ export async function githubRepoGarbageCollectActivity(
     );
   }
 
-  await deleteFolderNode({
+  await deleteDataSourceFolder({
     dataSourceConfig,
     folderId: getIssuesInternalId(repoId),
   });
@@ -678,7 +679,7 @@ export async function githubRepoGarbageCollectActivity(
     );
   }
 
-  await deleteFolderNode({
+  await deleteDataSourceFolder({
     dataSourceConfig,
     folderId: getDiscussionsInternalId(repoId),
   });
@@ -701,7 +702,7 @@ export async function githubRepoGarbageCollectActivity(
     },
   });
 
-  await deleteFolderNode({
+  await deleteDataSourceFolder({
     dataSourceConfig,
     folderId: getRepositoryInternalId(repoId),
   });
@@ -882,7 +883,7 @@ async function garbageCollectCodeSync(
     directoriesToDelete.forEach((d) =>
       fq.add(async () => {
         Context.current().heartbeat();
-        await deleteFolderNode({
+        await deleteDataSourceFolder({
           dataSourceConfig,
           folderId: d.internalId,
         });
@@ -890,7 +891,7 @@ async function garbageCollectCodeSync(
     );
   }
 
-  await deleteFolderNode({
+  await deleteDataSourceFolder({
     dataSourceConfig,
     folderId: getCodeRootInternalId(repoId),
   });
@@ -957,7 +958,7 @@ export async function githubCodeSyncActivity({
       },
     });
 
-    await deleteFolderNode({
+    await deleteDataSourceFolder({
       dataSourceConfig,
       folderId: getRepositoryInternalId(repoId),
     });
@@ -993,7 +994,7 @@ export async function githubCodeSyncActivity({
   githubCodeRepository.lastSeenAt = codeSyncStartedAt;
   await githubCodeRepository.save();
 
-  await upsertFolderNode({
+  await upsertDataSourceFolder({
     dataSourceConfig,
     folderId: githubCodeRepository.repoId,
     title: githubCodeRepository.repoName,
@@ -1050,7 +1051,7 @@ export async function githubCodeSyncActivity({
         },
       });
 
-      await deleteFolderNode({
+      await deleteDataSourceFolder({
         dataSourceConfig,
         folderId: getRepositoryInternalId(repoId),
       });
@@ -1235,7 +1236,7 @@ export async function githubCodeSyncActivity({
           });
         }
 
-        await upsertFolderNode({
+        await upsertDataSourceFolder({
           dataSourceConfig,
           folderId: d.internalId,
           parents: [
@@ -1285,7 +1286,7 @@ export async function githubCodeSyncActivity({
       logger.child({ task: "garbageCollectCodeSync" })
     );
 
-    await upsertFolderNode({
+    await upsertDataSourceFolder({
       dataSourceConfig,
       folderId: getCodeRootInternalId(repoId),
       title: "Code",
