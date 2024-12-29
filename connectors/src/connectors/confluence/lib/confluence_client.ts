@@ -463,12 +463,13 @@ export class ConfluenceClient {
     spaceId: string,
     depth: "all" | "root" = "all",
     sort: "id" | "-modified-date" = "id",
-    pageCursor?: string | null
+    pageCursor?: string | null,
+    limit: number = 25
   ) {
     const params = new URLSearchParams({
       depth,
       sort,
-      limit: "25",
+      limit: limit.toString(),
       status: "current",
     });
 

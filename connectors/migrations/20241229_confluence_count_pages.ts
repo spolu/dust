@@ -76,7 +76,8 @@ async function countNewMethodRequests(
       spaceId,
       "all",
       "id",
-      cursor
+      cursor,
+      250
     );
     requestCount++;
     pageCount += pages.length;
