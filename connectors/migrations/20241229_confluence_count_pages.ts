@@ -21,41 +21,40 @@ async function countPagesForConnector(
   logger: typeof Logger
 ) {
   const connectorId = connector.id;
+  let totalRequestCountOld = 0;
+  let totalRequestCountNew = 0;
 
   const { cloudId } = await fetchConfluenceConfigurationActivity(connectorId);
   const client = await getConfluenceClient({ cloudId, connectorId });
 
   const spaceIds = await getSpaceIdsToSyncActivity(connectorId);
 
-  try {
-    for (const spaceId of spaceIds) {
-      {
-        const { pageCount, requestCount } = await countOldMethodRequests(
-          client,
-          connector,
-          spaceId
-        );
-        logger.info({ spaceId, pageCount, requestCount }, "Old method");
+  for (const spaceId of spaceIds) {
+    try {
+      // old method
+      const { pageCount: pageCountOld, requestCount: requestCountOld } =
+        await countOldMethodRequests(client, connector, spaceId);
+      logger.info({ spaceId, pageCountOld, requestCountOld }, "Old method");
+      totalRequestCountOld += requestCountOld;
+
+      // new method
+      const { pageCount: pageCountNew, requestCount: requestCountNew } =
+        await countNewMethodRequests(client, spaceId);
+      logger.info({ spaceId, pageCountNew, requestCountNew }, "New method");
+      totalRequestCountNew += requestCountNew;
+    } catch (e) {
+      if (
+        e instanceof ProviderWorkflowError ||
+        e instanceof ExternalOAuthTokenError ||
+        e instanceof ConfluenceClientError
+      ) {
+        logger.error(`ERROR: ${e.message}`);
+        continue;
       }
-      {
-        const { pageCount, requestCount } = await countNewMethodRequests(
-          client,
-          spaceId
-        );
-        logger.info({ spaceId, pageCount, requestCount }, "New method");
-      }
+      throw e;
     }
-  } catch (e) {
-    if (
-      e instanceof ProviderWorkflowError ||
-      e instanceof ExternalOAuthTokenError ||
-      e instanceof ConfluenceClientError
-    ) {
-      logger.error(`ERROR: ${e.message}`);
-      return;
-    }
-    throw e;
   }
+  return { totalRequestCountOld, totalRequestCountNew };
 }
 
 /**
@@ -169,7 +168,12 @@ makeScript(
         continue;
       }
       logger.info({ connectorId }, "CHECK");
-      await countPagesForConnector(connector, logger.child({ connectorId }));
+      const { totalRequestCountOld, totalRequestCountNew } =
+        await countPagesForConnector(connector, logger.child({ connectorId }));
+      logger.info(
+        { connectorId, totalRequestCountOld, totalRequestCountNew },
+        "SUMMARY"
+      );
     }
     logger.info("DONE");
   }
