@@ -126,7 +126,7 @@ async function countOldMethodRequests(
       continue;
     }
 
-    const parentId = currentPage.id;
+    const parentId = currentPage.id.toString();
     const childrenPages = await ConfluencePage.findAll({
       where: { connectorId: connector.id, spaceId, parentId },
     });
