@@ -72,7 +72,6 @@ async function countNewMethodRequests(
   let pageCount = 0;
 
   let cursor = null;
-  let fetchedPages;
   do {
     const { pages, nextPageCursor } = await client.getPagesInSpace(
       spaceId,
@@ -82,10 +81,8 @@ async function countNewMethodRequests(
     );
     requestCount++;
     pageCount += pages.length;
-
-    fetchedPages = pages;
     cursor = nextPageCursor;
-  } while (fetchedPages.length > 0);
+  } while (cursor !== null);
 
   return { pageCount, requestCount };
 }
