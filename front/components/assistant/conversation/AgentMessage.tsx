@@ -1,7 +1,4 @@
-import type {
-  ConversationMessageSizeType,
-  FeedbackSelectorProps,
-} from "@dust-tt/sparkle";
+import type { FeedbackSelectorProps } from "@dust-tt/sparkle";
 import { CitationIndex } from "@dust-tt/sparkle";
 import { Citation, CitationIcons, CitationTitle } from "@dust-tt/sparkle";
 import {
@@ -124,7 +121,6 @@ interface AgentMessageProps {
   messageFeedback: FeedbackSelectorProps;
   owner: WorkspaceType;
   user: UserType;
-  size: ConversationMessageSizeType;
 }
 
 export type AgentStateClassification = "thinking" | "acting" | "done";
@@ -142,7 +138,6 @@ export function AgentMessage({
   messageFeedback,
   owner,
   user,
-  size,
 }: AgentMessageProps) {
   const [streamedAgentMessage, setStreamedAgentMessage] =
     useState<AgentMessageType>(message);
@@ -545,7 +540,6 @@ export function AgentMessage({
         );
       }}
       type="agent"
-      size={size}
       citations={citations}
     >
       <div>
@@ -592,7 +586,6 @@ export function AgentMessage({
           <AgentMessageActions
             agentMessage={agentMessage}
             lastAgentStateClassification={lastAgentStateClassification}
-            size={size}
             owner={owner}
           />
 
