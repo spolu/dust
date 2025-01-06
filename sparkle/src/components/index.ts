@@ -128,7 +128,7 @@ export {
   SheetTitle,
   SheetTrigger,
 } from "./Sheet";
-export { Skeleton } from "./Skeleton";
+export { LoadingBlock } from "./LoadingBlock";
 export { SliderToggle } from "./SliderToggle";
 export { default as Spinner } from "./Spinner";
 export { FlexSplitButton, SplitButton } from "./SplitButton";

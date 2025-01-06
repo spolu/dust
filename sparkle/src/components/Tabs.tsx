@@ -9,23 +9,20 @@ import { cn } from "@sparkle/lib/utils";
 
 const Tabs = TabsPrimitive.Root;
 
-const tabsListVariants = cva(
-  "s-inline-flex s-h-11 s-gap-2",
-  {
-    variants: {
-      size: {
-        full: "s-w-full",
-      },
-      border: {
-        true: "s-border-b s-border-separator",
-      },
+const tabsListVariants = cva("s-inline-flex s-h-11 s-gap-2", {
+  variants: {
+    size: {
+      full: "s-w-full",
     },
-    defaultVariants: {
-      size: "full",
-      border: true,
+    border: {
+      true: "s-border-b s-border-separator",
     },
-  }
-);
+  },
+  defaultVariants: {
+    size: "full",
+    border: true,
+  },
+});
 
 type TabsListProps = React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> &
   VariantProps<typeof tabsListVariants>;
