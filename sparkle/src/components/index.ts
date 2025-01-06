@@ -76,6 +76,7 @@ export { Input } from "./Input";
 export { Label } from "./Label";
 export type { LinkWrapperProps } from "./LinkWrapper";
 export { LinkWrapper } from "./LinkWrapper";
+export { LoadingBlock } from "./LoadingBlock";
 export * from "./markdown";
 export { Modal } from "./Modal";
 export * from "./NavigationList";
@@ -128,7 +129,6 @@ export {
   SheetTitle,
   SheetTrigger,
 } from "./Sheet";
-export { LoadingBlock } from "./LoadingBlock";
 export { SliderToggle } from "./SliderToggle";
 export { default as Spinner } from "./Spinner";
 export { FlexSplitButton, SplitButton } from "./SplitButton";
