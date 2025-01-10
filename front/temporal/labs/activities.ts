@@ -207,6 +207,11 @@ export async function processTranscriptActivity(
   let transcriptContent = "";
   let userParticipated = true;
 
+  localLogger.info(
+    {},
+    "[processTranscriptActivity] No history found. Proceeding."
+  );
+
   switch (transcriptsConfiguration.provider) {
     case "google_drive":
       const googleResult = await retrieveGoogleTranscriptContent(
@@ -265,22 +270,7 @@ export async function processTranscriptActivity(
       assertNever(transcriptsConfiguration.provider);
   }
 
-  try {
-    await transcriptsConfiguration.recordHistory({
-      configurationId: transcriptsConfiguration.id,
-      fileId,
-      fileName: transcriptTitle,
-    });
-  } catch (error) {
-    if (error instanceof UniqueConstraintError) {
-      localLogger.info(
-        {},
-        "[processTranscriptActivity] History record already exists. Stopping."
-      );
-      return;
-    }
-    throw error;
-  }
+  const tooShortToProcess = transcriptContent.length < minTranscriptsSize;
 
   const owner = auth.workspace();
 
