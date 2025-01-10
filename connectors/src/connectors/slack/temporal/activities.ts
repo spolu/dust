@@ -259,6 +259,7 @@ export async function syncChannel(
       parentId: null,
       parents: [slackChannelInternalIdFromSlackChannelId(channelId)],
       mimeType: SLACK_MIME_TYPES.CHANNEL,
+      providerVisibility: channel.private ? "private" : "public",
     });
   }
 
