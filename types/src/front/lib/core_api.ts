@@ -16,12 +16,12 @@ import { dustManagedCredentials } from "../../front/lib/api/credentials";
 import { EmbeddingProviderIdType } from "../../front/lib/assistant";
 import { Project } from "../../front/project";
 import { CredentialsType } from "../../front/provider";
-import { 
+import {
   BlockType,
   RunConfig,
   RunRunType,
   RunStatus,
-  TraceType
+  TraceType,
 } from "../../front/run";
 import { LightWorkspaceType } from "../../front/user";
 import { LoggerInterface } from "../../shared/logger";
