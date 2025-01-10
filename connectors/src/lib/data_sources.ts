@@ -1240,6 +1240,7 @@ export async function _upsertDataSourceFolder({
   parentId,
   title,
   mimeType,
+  providerVisibility,
 }: {
   dataSourceConfig: DataSourceConfig;
   folderId: string;
@@ -1248,6 +1249,7 @@ export async function _upsertDataSourceFolder({
   parentId: string | null;
   title: string;
   mimeType: string;
+  providerVisibility?: string;
 }) {
   const now = new Date();
 
@@ -1259,6 +1261,7 @@ export async function _upsertDataSourceFolder({
     parentId,
     parents,
     mimeType,
+    providerVisibility: providerVisibility || null,
   });
 
   if (r.isErr()) {

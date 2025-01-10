@@ -1,3 +1,9 @@
+import type { AxiosRequestConfig } from "axios";
+import axios from "axios";
+import { createParser } from "eventsource-parser";
+import http from "http";
+import https from "https";
+import { Readable } from "stream";
 import { z } from "zod";
 
 import type {
@@ -58,13 +64,6 @@ import {
 } from "./types";
 
 export * from "./types";
-
-import type { AxiosRequestConfig } from "axios";
-import axios from "axios";
-import { createParser } from "eventsource-parser";
-import http from "http";
-import https from "https";
-import { Readable } from "stream";
 
 interface DustResponse {
   status: number;
@@ -829,6 +828,7 @@ export class DustAPI {
     parentId,
     parents,
     mimeType,
+    providerVisibility,
   }: {
     dataSourceId: string;
     folderId: string;
@@ -837,6 +837,7 @@ export class DustAPI {
     parentId: string | null;
     parents: string[];
     mimeType: string;
+    providerVisibility: string | null;
   }) {
     const res = await this.request({
       method: "POST",
@@ -849,6 +850,7 @@ export class DustAPI {
         parent_id: parentId,
         parents,
         mime_type: mimeType,
+        provider_visibility: providerVisibility,
       },
     });
 

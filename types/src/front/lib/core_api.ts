@@ -16,13 +16,7 @@ import { dustManagedCredentials } from "../../front/lib/api/credentials";
 import { EmbeddingProviderIdType } from "../../front/lib/assistant";
 import { Project } from "../../front/project";
 import { CredentialsType } from "../../front/provider";
-import {
-  BlockType,
-  RunConfig,
-  RunRunType,
-  RunStatus,
-  TraceType,
-} from "../../front/run";
+import { BlockType, RunConfig, RunRunType, RunStatus, TraceType } from "../../front/run";
 import { LightWorkspaceType } from "../../front/user";
 import { LoggerInterface } from "../../shared/logger";
 import { Err, Ok, Result } from "../../shared/result";
@@ -1543,6 +1537,7 @@ export class CoreAPI {
     parents,
     title,
     mimeType,
+    providerVisibility,
   }: {
     projectId: string;
     dataSourceId: string;
@@ -1552,6 +1547,7 @@ export class CoreAPI {
     parents: string[];
     title: string;
     mimeType: string;
+    providerVisibility: string | null;
   }): Promise<CoreAPIResponse<{ folder: CoreAPIFolder }>> {
     const response = await this._fetchWithError(
       `${this._url}/projects/${projectId}/data_sources/${encodeURIComponent(
@@ -1569,6 +1565,7 @@ export class CoreAPI {
           parent_id: parentId,
           parents,
           mime_type: mimeType,
+          provider_visibility: providerVisibility,
         }),
       }
     );
