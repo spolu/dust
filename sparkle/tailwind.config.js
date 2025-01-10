@@ -234,7 +234,7 @@ module.exports = {
             dark: colors.slate[800],
           },
         },
-        separator: { DEFAULT: colors.slate[200], dark: colors.slate[800] },
+        separator: { DEFAULT: "#E9EFF5", dark: colors.slate[800] },
         ring: {
           DEFAULT: colors.blue[200],
           dark: colors.slate[700],
@@ -253,7 +253,7 @@ module.exports = {
           },
         },
         muted: {
-          DEFAULT: { DEFAULT: colors.slate[100], dark: colors.slate[900] },
+          DEFAULT: { DEFAULT: colors.slate[50], dark: colors.slate[900] },
           foreground: {
             DEFAULT: colors.slate[500],
             dark: colors.slate[500],
