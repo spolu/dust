@@ -158,7 +158,7 @@ impl PostgresStore {
         // Check that all parents exist in data_sources_nodes.
         let stmt_check = tx
             .prepare(
-                "SELECT COUNT(*) FROM data_sources_nodes
+                "SELECT COUNT(id) FROM data_sources_nodes
                  WHERE data_source = $1 AND node_id = ANY($2)",
             )
             .await?;
@@ -1476,7 +1476,7 @@ impl Store for PostgresStore {
         // Check that all parents exist in data_sources_nodes.
         let count: u64 = tx
             .execute(
-                "SELECT COUNT(*) FROM data_sources_nodes
+                "SELECT COUNT(id) FROM data_sources_nodes
                  WHERE data_source = $1 AND node_id = ANY($2)",
                 &[&data_source_row_id, &parents],
             )
@@ -2820,7 +2820,7 @@ impl Store for PostgresStore {
         // Check that all parents exist in data_sources_nodes.
         let count: u64 = tx
             .execute(
-                "SELECT COUNT(*) FROM data_sources_nodes
+                "SELECT COUNT(id) FROM data_sources_nodes
                  WHERE data_source = $1 AND node_id = ANY($2)",
                 &[&data_source_row_id, &parents],
             )
