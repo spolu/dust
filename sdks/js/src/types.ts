@@ -1456,6 +1456,26 @@ const SpaceTypeSchema = z.object({
   updatedAt: z.number(),
 });
 
+const DatasetSchemaEntryType = FlexibleEnumSchema<
+  "string" | "number" | "boolean" | "json"
+>();
+
+const DatasetSchema = z.object({
+  name: z.string(),
+  description: z.string().nullable(),
+  data: z.array(z.record(z.any())).nullable().optional(),
+  schema: z
+    .array(
+      z.object({
+        key: z.string(),
+        type: DatasetSchemaEntryType,
+        description: z.string().nullable(),
+      })
+    )
+    .nullable()
+    .optional(),
+});
+
 const AppTypeSchema = z.object({
   id: ModelIdSchema,
   sId: z.string(),
@@ -1466,7 +1486,10 @@ const AppTypeSchema = z.object({
   savedRun: z.string().nullable(),
   dustAPIProjectId: z.string(),
   space: SpaceTypeSchema,
+  datasets: z.array(DatasetSchema).optional(),
 });
+
+export type ApiAppType = z.infer<typeof AppTypeSchema>;
 
 export const RunAppResponseSchema = z.object({
   run: RunTypeSchema,
@@ -1751,7 +1774,11 @@ export type ValidateMemberResponseType = z.infer<
   typeof ValidateMemberResponseSchema
 >;
 
-const GetAppsResponseSchema = z.object({
+export const GetAppsResponseSchema = z.object({
+  apps: AppTypeSchema.array(),
+});
+
+export const PostAppsRequestSchema = z.object({
   apps: AppTypeSchema.array(),
 });
 
