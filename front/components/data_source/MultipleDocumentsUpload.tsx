@@ -9,6 +9,7 @@ import { getSupportedNonImageFileExtensions } from "@dust-tt/types";
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useFileDrop } from "@app/components/assistant/conversation/FileUploaderContext";
 import { DocumentLimitPopup } from "@app/components/data_source/DocumentLimitPopup";
 import type {
   FileBlob,
@@ -64,12 +65,10 @@ export const MultipleDocumentsUpload = ({
     completed: number;
   }>(null);
 
-  const handleFileChange = useCallback(
-    async (
-      e: ChangeEvent<HTMLInputElement> & { target: { files: File[] } }
-    ) => {
+  const uploadFiles = useCallback(
+    async (files: File[]) => {
       // Empty file input
-      if (!e.target.files || e.target.files.length === 0) {
+      if (files.length === 0) {
         close(false);
         return;
       }
@@ -77,21 +76,22 @@ export const MultipleDocumentsUpload = ({
       // Open plan popup if limit is reached
       if (
         plan.limits.dataSources.documents.count != -1 &&
-        e.target.files.length + totalNodesCount >
-          plan.limits.dataSources.documents.count
+        files.length + totalNodesCount > plan.limits.dataSources.documents.count
       ) {
         setIsLimitPopupOpen(true);
         return;
       }
 
       setIsBulkFilesUploading({
-        total: e.target.files.length,
+        total: files.length,
         completed: 0,
       });
 
       // upload Files and get FileBlobs (only keep successful uploads)
       // Each individual error triggers a notification
-      const fileBlobs = (await fileUploaderService.handleFileChange(e))?.filter(
+      const fileBlobs = (
+        await fileUploaderService.handleFilesUpload(files)
+      )?.filter(
         (fileBlob: FileBlob): fileBlob is FileBlobWithFileId =>
           !!fileBlob.fileId
       );
@@ -136,6 +136,30 @@ export const MultipleDocumentsUpload = ({
       totalNodesCount,
       doUpsertFileAsDataSourceEntry,
     ]
+  );
+
+  // Process dropped files if any.
+  const { droppedFiles, setDroppedFiles } = useFileDrop();
+  useEffect(() => {
+    const handleDroppedFiles = async () => {
+      // Make sure the files are cleared after processing
+      setDroppedFiles([]);
+      await uploadFiles(droppedFiles);
+    };
+    void handleDroppedFiles();
+  }, [droppedFiles, setDroppedFiles, uploadFiles]);
+
+  // Handle file change from file input.
+  const handleFileChange = useCallback(
+    async (
+      e: ChangeEvent<HTMLInputElement> & { target: { files: File[] } }
+    ) => {
+      const selectedFiles = Array.from(
+        (e?.target as HTMLInputElement).files ?? []
+      );
+      await uploadFiles(selectedFiles);
+    },
+    [uploadFiles]
   );
 
   const handleFileInputBlur = useCallback(() => {
