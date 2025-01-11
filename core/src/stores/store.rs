@@ -30,6 +30,7 @@ pub struct DocumentCreateParams {
     pub document_id: String,
     pub title: Option<String>,
     pub mime_type: Option<String>,
+    pub provider_visibility: Option<String>,
     pub timestamp: u64,
     pub tags: Vec<String>,
     pub parents: Vec<String>,
@@ -46,6 +47,7 @@ impl From<Document> for DocumentCreateParams {
             document_id: document.document_id,
             title: Some(document.title),
             mime_type: Some(document.mime_type),
+            provider_visibility: document.provider_visibility,
             timestamp: document.timestamp,
             tags: document.tags,
             parents: document.parents,
@@ -69,6 +71,7 @@ pub struct TableUpsertParams {
     pub remote_database_secret_id: Option<String>,
     pub title: String,
     pub mime_type: String,
+    pub provider_visibility: Option<String>,
 }
 
 pub struct FolderUpsertParams {
@@ -77,6 +80,7 @@ pub struct FolderUpsertParams {
     pub title: String,
     pub parents: Vec<String>,
     pub mime_type: String,
+    pub provider_visibility: Option<String>,
 }
 
 #[async_trait]
@@ -596,6 +600,7 @@ pub const POSTGRES_TABLES: [&'static str; 16] = [
        node_id                      TEXT NOT NULL,
        title                        TEXT NOT NULL,
        mime_type                    TEXT NOT NULL,
+       provider_visibility          TEXT,
        parents                      TEXT[] NOT NULL,
        document                     BIGINT,
        \"table\"                      BIGINT,

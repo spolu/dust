@@ -53,6 +53,7 @@ pub struct UpsertNode<'a> {
     pub timestamp: u64,
     pub title: &'a str,
     pub mime_type: &'a str,
+    pub provider_visibility: &'a Option<String>,
     pub parents: &'a Vec<String>,
 }
 
@@ -187,9 +188,9 @@ impl PostgresStore {
         let stmt = tx
             .prepare(
                 "INSERT INTO data_sources_nodes \
-                  (id, data_source, created, node_id, timestamp, title, mime_type, parents, \
+                  (id, data_source, created, node_id, timestamp, title, mime_type, provider_visibility, parents, \
                    document, \"table\", folder) \
-                  VALUES (DEFAULT, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
+                  VALUES (DEFAULT, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) \
                   ON CONFLICT (data_source, node_id) DO UPDATE \
                   SET timestamp = EXCLUDED.timestamp, title = EXCLUDED.title, \
                     mime_type = EXCLUDED.mime_type, parents = EXCLUDED.parents, \
@@ -209,6 +210,7 @@ impl PostgresStore {
                     &(upsert_params.timestamp as i64),
                     &upsert_params.title,
                     &upsert_params.mime_type,
+                    &upsert_params.provider_visibility,
                     &upsert_params.parents,
                     &document_row_id,
                     &table_row_id,
@@ -1354,7 +1356,7 @@ impl Store for PostgresStore {
                 c.query(
                     "SELECT dsd.id, dsd.created, dsd.timestamp, dsd.tags_array, dsn.parents, \
                        dsd.source_url, dsd.hash, dsd.text_size, dsd.chunk_count, dsn.title, \
-                       dsn.mime_type \
+                       dsn.mime_type, dsn.provider_visibility \
                        FROM data_sources_documents dsd \
                        INNER JOIN data_sources_nodes dsn ON dsn.document=dsd.id \
                        WHERE dsd.data_source = $1 AND dsd.document_id = $2 \
@@ -1367,7 +1369,7 @@ impl Store for PostgresStore {
                 c.query(
                     "SELECT dsd.id, dsd.created, dsd.timestamp, dsd.tags_array, dsn.parents, \
                        dsd.source_url, dsd.hash, dsd.text_size, dsd.chunk_count, dsn.title, \
-                       dsn.mime_type \
+                       dsn.mime_type, dsn.provider_visibility \
                        FROM data_sources_documents dsd \
                        INNER JOIN data_sources_nodes dsn ON dsn.document=dsd.id \
                        WHERE dsd.data_source = $1 AND dsd.document_id = $2 \
@@ -1390,6 +1392,7 @@ impl Store for PostgresStore {
             i64,
             Option<String>,
             Option<String>,
+            Option<String>,
         )> = match r.len() {
             0 => None,
             1 => Some((
@@ -1404,6 +1407,7 @@ impl Store for PostgresStore {
                 r[0].get(8),
                 r[0].get(9),
                 r[0].get(10),
+                r[0].get(11),
             )),
             _ => unreachable!(),
         };
@@ -1422,6 +1426,7 @@ impl Store for PostgresStore {
                 chunk_count,
                 node_title,
                 node_mime_type,
+                node_provider_visibility,
             )) => Ok(Some(Document {
                 data_source_id: data_source_id.clone(),
                 data_source_internal_id: data_source_internal_id.clone(),
@@ -1431,6 +1436,7 @@ impl Store for PostgresStore {
                 document_id,
                 tags,
                 mime_type: node_mime_type.unwrap_or("application/octet-stream".to_string()),
+                provider_visibility: node_provider_visibility,
                 parent_id: parents.get(1).cloned(),
                 parents,
                 source_url,
@@ -1928,12 +1934,14 @@ impl Store for PostgresStore {
         // TODO: defaults
         let title = create_params.title.unwrap_or("".to_string());
         let mime_type = create_params.mime_type.unwrap_or("".to_string());
+        let provider_visibility = create_params.provider_visibility;
 
         let document = Document {
             data_source_id,
             data_source_internal_id: data_source_internal_id.to_string(),
             title,
             mime_type,
+            provider_visibility,
             created: created as u64,
             document_id: create_params.document_id,
             timestamp: create_params.timestamp,
@@ -1956,6 +1964,7 @@ impl Store for PostgresStore {
                 timestamp: document.timestamp,
                 title: &document.title,
                 mime_type: &document.mime_type,
+                provider_visibility: &document.provider_visibility,
                 parents: &document.parents,
             },
             data_source_row_id,
@@ -2037,7 +2046,7 @@ impl Store for PostgresStore {
         let sql = format!(
             "SELECT dsd.id, dsd.created, dsd.document_id, dsd.timestamp, dsd.tags_array, \
                dsn.parents, dsd.source_url, dsd.hash, dsd.text_size, dsd.chunk_count, \
-               dsn.title, dsn.mime_type \
+               dsn.title, dsn.mime_type, dsn.provider_visibility \
                FROM data_sources_documents dsd \
                INNER JOIN data_sources_nodes dsn ON dsn.document=dsd.id \
                WHERE {} ORDER BY dsd.timestamp DESC",
@@ -2078,6 +2087,7 @@ impl Store for PostgresStore {
                 let chunk_count: i64 = r.get(9);
                 let node_title: Option<String> = r.get(10);
                 let node_mime_type: Option<String> = r.get(11);
+                let node_provider_visibility: Option<String> = r.get(12);
 
                 let tags = if remove_system_tags {
                     // Remove tags that are prefixed with the system tag prefix.
@@ -2095,6 +2105,7 @@ impl Store for PostgresStore {
                     timestamp: timestamp as u64,
                     title: node_title.unwrap_or(document_id.clone()),
                     mime_type: node_mime_type.unwrap_or("application/octet-stream".to_string()),
+                    provider_visibility: node_provider_visibility,
                     document_id,
                     tags,
                     parent_id: parents.get(1).cloned(),
@@ -2713,6 +2724,7 @@ impl Store for PostgresStore {
             upsert_params.timestamp,
             title,
             upsert_params.mime_type,
+            upsert_params.provider_visibility,
             upsert_params.tags,
             upsert_params.parents.get(1).cloned(),
             upsert_params.parents,
@@ -2729,6 +2741,7 @@ impl Store for PostgresStore {
                 timestamp: table.timestamp(),
                 title: table.title(),
                 mime_type: table.mime_type(),
+                provider_visibility: table.provider_visibility(),
                 parents: table.parents(),
             },
             data_source_row_id,
@@ -2922,7 +2935,7 @@ impl Store for PostgresStore {
                         t.timestamp, t.tags_array, dsn.parents, \
                         t.schema, t.schema_stale_at, \
                         t.remote_database_table_id, t.remote_database_secret_id, \
-                        dsn.title, dsn.mime_type \
+                        dsn.title, dsn.mime_type, dsn.provider_visibility \
                         FROM tables t INNER JOIN data_sources_nodes dsn ON dsn.table=t.id \
                         WHERE t.data_source = $1 AND t.table_id = $2 LIMIT 1",
             )
@@ -2943,6 +2956,7 @@ impl Store for PostgresStore {
             Option<String>,
             String,
             String,
+            Option<String>,
         )> = match r.len() {
             0 => None,
             1 => Some((
@@ -2959,6 +2973,7 @@ impl Store for PostgresStore {
                 r[0].get(10),
                 r[0].get(11),
                 r[0].get(12),
+                r[0].get(13),
             )),
             _ => unreachable!(),
         };
@@ -2979,6 +2994,7 @@ impl Store for PostgresStore {
                 remote_database_secret_id,
                 title,
                 mime_type,
+                provider_visibility,
             )) => {
                 let parsed_schema: Option<TableSchema> = match schema {
                     None => None,
@@ -3002,6 +3018,7 @@ impl Store for PostgresStore {
                     timestamp as u64,
                     title,
                     mime_type,
+                    provider_visibility,
                     tags,
                     parents.get(1).cloned(),
                     parents,
@@ -3079,7 +3096,7 @@ impl Store for PostgresStore {
                     t.timestamp, t.tags_array, dsn.parents, \
                     t.schema, t.schema_stale_at, \
                     t.remote_database_table_id, t.remote_database_secret_id, \
-                    dsn.title, dsn.mime_type \
+                    dsn.title, dsn.mime_type, dsn.provider_visibility \
                 FROM tables t INNER JOIN data_sources_nodes dsn ON dsn.table=t.id \
                 WHERE {} ORDER BY t.timestamp DESC",
             where_clauses.join(" AND "),
@@ -3121,6 +3138,7 @@ impl Store for PostgresStore {
                 let remote_database_secret_id: Option<String> = r.get(10);
                 let title: String = r.get(11);
                 let mime_type: String = r.get(12);
+                let provider_visibility: Option<String> = r.get(13);
 
                 let parsed_schema: Option<TableSchema> = match schema {
                     None => None,
@@ -3144,6 +3162,7 @@ impl Store for PostgresStore {
                     timestamp as u64,
                     title,
                     mime_type,
+                    provider_visibility,
                     tags,
                     parents.get(1).cloned(),
                     parents,
@@ -3283,6 +3302,7 @@ impl Store for PostgresStore {
             upsert_params.parents.get(1).cloned(),
             upsert_params.parents,
             upsert_params.mime_type,
+            upsert_params.provider_visibility,
         );
 
         self.upsert_data_source_node(
@@ -3290,6 +3310,7 @@ impl Store for PostgresStore {
                 node_id: folder.folder_id(),
                 node_type: &NodeType::Folder,
                 timestamp: folder.timestamp(),
+                provider_visibility: folder.provider_visibility(),
                 title: folder.title(),
                 mime_type: folder.mime_type(),
                 parents: folder.parents(),
@@ -3402,7 +3423,7 @@ impl Store for PostgresStore {
         }
 
         let sql = format!(
-            "SELECT dsn.node_id, dsn.title, dsn.timestamp, dsn.parents, dsn.mime_type \
+            "SELECT dsn.node_id, dsn.title, dsn.timestamp, dsn.parents, dsn.mime_type, dsn.provider_visibility \
                FROM data_sources_nodes dsn \
                WHERE dsn.folder IS NOT NULL AND {} ORDER BY dsn.timestamp DESC",
             where_clauses.join(" AND "),
@@ -3451,6 +3472,7 @@ impl Store for PostgresStore {
                 let timestamp: i64 = r.get(2);
                 let parents: Vec<String> = r.get(3);
                 let mime_type: String = r.get(4);
+                let provider_visibility: Option<String> = r.get(5);
 
                 Ok(Folder::new(
                     data_source_id.clone(),
@@ -3461,6 +3483,7 @@ impl Store for PostgresStore {
                     parents.get(1).cloned(),
                     parents,
                     mime_type,
+                    provider_visibility,
                 ))
             })
             .collect::<Result<Vec<_>>>()?;
@@ -3533,7 +3556,7 @@ impl Store for PostgresStore {
 
         let stmt = c
             .prepare(
-                "SELECT timestamp, title, mime_type, parents, node_id, document, \"table\", folder \
+                "SELECT timestamp, title, mime_type, provider_visibility, parents, node_id, document, \"table\", folder \
                    FROM data_sources_nodes \
                    WHERE data_source = $1 AND node_id = $2 LIMIT 1",
             )
@@ -3546,11 +3569,12 @@ impl Store for PostgresStore {
                 let timestamp: i64 = row[0].get::<_, i64>(0);
                 let title: String = row[0].get::<_, String>(1);
                 let mime_type: String = row[0].get::<_, String>(2);
-                let parents: Vec<String> = row[0].get::<_, Vec<String>>(3);
-                let node_id: String = row[0].get::<_, String>(4);
-                let document_row_id = row[0].get::<_, Option<i64>>(5);
-                let table_row_id = row[0].get::<_, Option<i64>>(6);
-                let folder_row_id = row[0].get::<_, Option<i64>>(7);
+                let provider_visibility: Option<String> = row[0].get::<_, Option<String>>(3);
+                let parents: Vec<String> = row[0].get::<_, Vec<String>>(4);
+                let node_id: String = row[0].get::<_, String>(5);
+                let document_row_id = row[0].get::<_, Option<i64>>(6);
+                let table_row_id = row[0].get::<_, Option<i64>>(7);
+                let folder_row_id = row[0].get::<_, Option<i64>>(8);
                 let (node_type, row_id) = match (document_row_id, table_row_id, folder_row_id) {
                     (Some(id), None, None) => (NodeType::Document, id),
                     (None, Some(id), None) => (NodeType::Table, id),
@@ -3566,6 +3590,7 @@ impl Store for PostgresStore {
                         timestamp as u64,
                         &title,
                         &mime_type,
+                        provider_visibility,
                         parents.get(1).cloned(),
                         parents,
                     ),
@@ -3586,7 +3611,7 @@ impl Store for PostgresStore {
 
         let stmt = c
             .prepare(
-                "SELECT dsn.timestamp, dsn.title, dsn.mime_type, dsn.parents, dsn.node_id, dsn.document, dsn.\"table\", dsn.folder, ds.data_source_id, ds.internal_id, dsn.id \
+                "SELECT dsn.timestamp, dsn.title, dsn.mime_type, dsn.provider_visibility, dsn.parents, dsn.node_id, dsn.document, dsn.\"table\", dsn.folder, ds.data_source_id, ds.internal_id, dsn.id \
                    FROM data_sources_nodes dsn JOIN data_sources ds ON dsn.data_source = ds.id \
                    WHERE dsn.id > $1 ORDER BY dsn.id ASC LIMIT $2",
             )
@@ -3599,13 +3624,14 @@ impl Store for PostgresStore {
                 let timestamp: i64 = row.get::<_, i64>(0);
                 let title: String = row.get::<_, String>(1);
                 let mime_type: String = row.get::<_, String>(2);
-                let parents: Vec<String> = row.get::<_, Vec<String>>(3);
-                let node_id: String = row.get::<_, String>(4);
-                let document_row_id = row.get::<_, Option<i64>>(5);
-                let table_row_id = row.get::<_, Option<i64>>(6);
-                let folder_row_id = row.get::<_, Option<i64>>(7);
-                let data_source_id: String = row.get::<_, String>(8);
-                let data_source_internal_id: String = row.get::<_, String>(9);
+                let provider_visibility: Option<String> = row.get::<_, Option<String>>(3);
+                let parents: Vec<String> = row.get::<_, Vec<String>>(4);
+                let node_id: String = row.get::<_, String>(5);
+                let document_row_id = row.get::<_, Option<i64>>(6);
+                let table_row_id = row.get::<_, Option<i64>>(7);
+                let folder_row_id = row.get::<_, Option<i64>>(8);
+                let data_source_id: String = row.get::<_, String>(9);
+                let data_source_internal_id: String = row.get::<_, String>(10);
                 let (node_type, element_row_id) =
                     match (document_row_id, table_row_id, folder_row_id) {
                         (Some(id), None, None) => (NodeType::Document, id),
@@ -3623,6 +3649,7 @@ impl Store for PostgresStore {
                         timestamp as u64,
                         &title,
                         &mime_type,
+                        provider_visibility,
                         parents.get(1).cloned(),
                         parents,
                     ),
