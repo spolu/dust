@@ -107,7 +107,7 @@ export interface ContentNode {
   preventSelection?: boolean;
   permission: ConnectorPermission;
   lastUpdatedAt: number | null;
-  providerVisibility?: "public" | "private";
+  providerVisibility?: "public" | "private" | null;
 }
 
 export type ContentNodeWithParentIds = ContentNode & {
