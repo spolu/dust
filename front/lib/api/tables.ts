@@ -138,7 +138,6 @@ export async function upsertTableFromCsv({
   tableParents,
   csv,
   truncate,
-  useAppForHeaderDetection,
   detectedHeaders,
   title,
   mimeType,
@@ -155,7 +154,6 @@ export async function upsertTableFromCsv({
   tableParents: string[];
   csv: string | null;
   truncate: boolean;
-  useAppForHeaderDetection: boolean;
   detectedHeaders?: DetectedHeadersType;
   title: string;
   mimeType: string;
@@ -165,7 +163,6 @@ export async function upsertTableFromCsv({
     ? await rowsFromCsv({
         auth,
         csv,
-        useAppForHeaderDetection,
         detectedHeaders,
       })
     : null;
@@ -354,12 +351,10 @@ export async function upsertTableFromCsv({
 export async function rowsFromCsv({
   auth,
   csv,
-  useAppForHeaderDetection,
   detectedHeaders,
 }: {
   auth: Authenticator;
   csv: string;
-  useAppForHeaderDetection: boolean;
   detectedHeaders?: DetectedHeadersType;
 }): Promise<
   Result<
@@ -378,7 +373,7 @@ export async function rowsFromCsv({
 
   const headerRes = detectedHeaders
     ? new Ok(detectedHeaders)
-    : await detectHeaders(auth, csv, delimiter, useAppForHeaderDetection);
+    : await detectHeaders(auth, csv, delimiter);
 
   if (headerRes.isErr()) {
     return headerRes;
