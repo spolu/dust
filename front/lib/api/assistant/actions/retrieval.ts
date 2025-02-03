@@ -434,6 +434,9 @@ export class RetrievalConfigurationServerRunner extends BaseActionConfigurationS
         }
         config.DATASOURCE.filter.parents.not.push(...ds.filter.parents.not);
       }
+      if (ds.filter.tags) {
+        config.DATASOURCE.filter.tags = ds.filter.tags;
+      }
     }
 
     // Handle timestamp filtering.
