@@ -269,7 +269,6 @@ const upsertTableToDatasource: ProcessingFunction = async ({
     async: false,
     dataSource,
     auth,
-    useAppForHeaderDetection: true,
     title: upsertTitle ?? file.fileName,
     mimeType: file.contentType,
     sourceUrl: file.getPrivateUrl(auth),
@@ -305,12 +304,7 @@ type ProcessingFunction = ({
     | Pick<UpsertDocumentArgs, "document_id" | "title" | "tags">
     | Pick<
         UpsertTableArgs,
-        | "name"
-        | "title"
-        | "description"
-        | "tableId"
-        | "tags"
-        | "useAppForHeaderDetection"
+        "name" | "title" | "description" | "tableId" | "tags"
       >;
 }) => Promise<Result<undefined, Error>>;
 
@@ -431,12 +425,7 @@ export async function processAndUpsertToDataSource(
       | Pick<UpsertDocumentArgs, "document_id" | "title" | "tags">
       | Pick<
           UpsertTableArgs,
-          | "name"
-          | "title"
-          | "description"
-          | "tableId"
-          | "tags"
-          | "useAppForHeaderDetection"
+          "name" | "title" | "description" | "tableId" | "tags"
         >;
   }
 ): Promise<
